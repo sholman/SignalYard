@@ -426,34 +426,65 @@
         });
     }
     
+    // A "scoped" filter of the form `Key = value` matches only logs that have a
+    // property named Key whose value equals value exactly (case-insensitive), so
+    // filtering CustomerId = 22 never picks up 221, 1022, or an unrelated 22 in a
+    // message. We only treat the text as scoped when a property with that key
+    // actually exists in the current results; otherwise it falls back to free-text
+    // so a normal search containing "=" still works.
+    function parseScopedFilter(searchText) {
+        const m = searchText.match(/^([^\s=]+)\s*=\s*(.*)$/);
+        if (!m) return null;
+        const keyLower = m[1].toLowerCase();
+        const exists = logs.some(l => l.properties &&
+            Object.keys(l.properties).some(k => k.toLowerCase() === keyLower));
+        if (!exists) return null;
+        return { key: keyLower, value: m[2].toLowerCase() };
+    }
+
     function filterLogs(searchText) {
         const entries = document.querySelectorAll('.log-entry');
         let visibleCount = 0;
         const searchLower = searchText.toLowerCase();
-        
+        const scoped = parseScopedFilter(searchText);
+
         entries.forEach((entry, index) => {
             const log = logs[index];
             if (!log) return;
-            
-            let propsMatch = false;
-            if (log.properties) {
-                for (const [k, v] of Object.entries(log.properties)) {
-                    const keyMatch = k.toLowerCase().includes(searchLower);
-                    const valStr = String(v).toLowerCase();
-                    const valMatch = valStr.includes(searchLower);
-                    if (keyMatch || valMatch) {
-                        propsMatch = true;
-                        break;
+
+            let matches;
+            if (!searchText) {
+                matches = true;
+            } else if (scoped) {
+                matches = false;
+                if (log.properties) {
+                    for (const [k, v] of Object.entries(log.properties)) {
+                        if (k.toLowerCase() === scoped.key && String(v).toLowerCase() === scoped.value) {
+                            matches = true;
+                            break;
+                        }
                     }
                 }
+            } else {
+                let propsMatch = false;
+                if (log.properties) {
+                    for (const [k, v] of Object.entries(log.properties)) {
+                        const keyMatch = k.toLowerCase().includes(searchLower);
+                        const valStr = String(v).toLowerCase();
+                        const valMatch = valStr.includes(searchLower);
+                        if (keyMatch || valMatch) {
+                            propsMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                matches = log.message.toLowerCase().includes(searchLower) ||
+                    (log.messageTemplate && log.messageTemplate.toLowerCase().includes(searchLower)) ||
+                    (log.exception && log.exception.toLowerCase().includes(searchLower)) ||
+                    propsMatch;
             }
-            
-            const matches = !searchText || 
-                log.message.toLowerCase().includes(searchLower) ||
-                (log.messageTemplate && log.messageTemplate.toLowerCase().includes(searchLower)) ||
-                (log.exception && log.exception.toLowerCase().includes(searchLower)) ||
-                propsMatch;
-            
+
             entry.style.display = matches ? '' : 'none';
             if (matches) visibleCount++;
         });
@@ -489,8 +520,9 @@
     
     function filterByProperty(key, value) {
         event.stopPropagation();
-        // Search by the raw value for better matching
-        const searchText = value || key;
+        // Scope the filter to this exact property so e.g. CustomerId = 22 matches
+        // only that field's value, not any log that happens to contain "22".
+        const searchText = value !== '' ? key + ' = ' + value : key;
         if (filterInput) {
             filterInput.value = searchText;
             filterLogs(searchText);
