@@ -84,6 +84,24 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// The MCP transport runs in stateless (POST-only) mode, so it offers no server->client SSE stream.
+// HTTP MCP clients still probe GET /mcp to open that stream. Without this short-circuit, routing
+// produces a synthetic "405" endpoint that carries no auth metadata, so the global OIDC FallbackPolicy
+// hijacks it into a 302 login redirect. A headless client can't follow that and retries with no
+// backoff — an endless reconnect storm. Answer non-POST /mcp probes with a clean 405 before auth runs.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.Equals("/mcp", StringComparison.OrdinalIgnoreCase)
+        && !HttpMethods.IsPost(context.Request.Method))
+    {
+        context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+        context.Response.Headers.Allow = "POST";
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 
