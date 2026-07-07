@@ -1,0 +1,74 @@
+@{
+    // Seconds between automatic reloads. Pages can override via
+    // ViewData["AutoRefreshSeconds"]; defaults to 2 minutes.
+    var seconds = ViewData["AutoRefreshSeconds"] is int s ? s : 120;
+}
+
+@* Fixed corner widget: a depleting ring + countdown, plus a manual refresh button.
+   A page may define window.signalYardShouldPauseRefresh() to freeze the countdown
+   while the user is mid-interaction (see the log viewer). *@
+<div class="auto-refresh" id="autoRefresh" aria-live="polite">
+    <svg class="auto-refresh-ring" viewBox="0 0 20 20" aria-hidden="true">
+        <circle class="ring-track" cx="10" cy="10" r="8"></circle>
+        <circle class="ring-progress" id="autoRefreshRing" cx="10" cy="10" r="8"></circle>
+    </svg>
+    <span class="auto-refresh-text" id="autoRefreshText">Refreshing in 2:00</span>
+    <button type="button" class="auto-refresh-btn" id="autoRefreshNow"
+            title="Refresh now" aria-label="Refresh now">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+    </button>
+</div>
+
+<script>
+    (function () {
+        var TOTAL = @seconds;
+        var ring = document.getElementById('autoRefreshRing');
+        var text = document.getElementById('autoRefreshText');
+        var widget = document.getElementById('autoRefresh');
+        var CIRC = 2 * Math.PI * 8; // r=8 in the 20x20 viewBox
+
+        ring.style.strokeDasharray = CIRC.toFixed(3);
+
+        var remaining = TOTAL;
+
+        function fmt(secs) {
+            var m = Math.floor(secs / 60);
+            var s = secs % 60;
+            return m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function render() {
+            text.textContent = 'Refreshing in ' + fmt(remaining);
+            ring.style.strokeDashoffset = (CIRC * (1 - remaining / TOTAL)).toFixed(3);
+        }
+
+        function paused() {
+            return typeof window.signalYardShouldPauseRefresh === 'function'
+                && window.signalYardShouldPauseRefresh();
+        }
+
+        document.getElementById('autoRefreshNow').addEventListener('click', function () {
+            window.location.reload();
+        });
+
+        render();
+        setInterval(function () {
+            if (paused()) {
+                widget.classList.add('is-paused');
+                text.textContent = 'Auto-refresh paused';
+                return;
+            }
+            widget.classList.remove('is-paused');
+            remaining -= 1;
+            if (remaining <= 0) {
+                window.location.reload();
+                return;
+            }
+            render();
+        }, 1000);
+    })();
+</script>

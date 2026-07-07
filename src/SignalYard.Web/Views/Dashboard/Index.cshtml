@@ -129,6 +129,8 @@
                     var wrnPct = b.Total > 0 ? (double)b.Warnings / b.Total * 100 : 0;
                     var othPct = b.Total > 0 ? (double)b.Others / b.Total * 100 : 0;
                     <a class="chart-col" href="@LogsUrl(from: b.Start, to: b.End)"
+                       data-start="@b.Start.UtcDateTime.ToString("o")"
+                       data-total="@b.Total" data-err="@b.Errors" data-warn="@b.Warnings"
                        title="@BucketLabel(b, stats.BucketMinutes): @b.Total.ToString("N0") logs (@b.Errors err, @b.Warnings warn)">
                         <span class="chart-bar-inner" style="height:@P(barPct)%">
                             @if (b.Errors > 0)
@@ -151,7 +153,14 @@
             <div class="chart-labels" style="min-width:@(chartMinWidth)px">
                 @for (var i = 0; i < stats.Buckets.Count; i++)
                 {
-                    <span class="chart-label">@(i % labelStep == 0 ? AxisLabel(stats.Buckets[i], stats.BucketMinutes) : "")</span>
+                    if (i % labelStep == 0)
+                    {
+                        <span class="chart-label" data-start="@stats.Buckets[i].Start.UtcDateTime.ToString("o")">@AxisLabel(stats.Buckets[i], stats.BucketMinutes)</span>
+                    }
+                    else
+                    {
+                        <span class="chart-label"></span>
+                    }
                 }
             </div>
             </div>
@@ -211,4 +220,43 @@
         var fmt = bucketMinutes >= 1440 ? "MMM d" : bucketMinutes >= 360 ? "ddd HH:mm" : "HH:mm";
         return b.Start.DateTime.ToString(fmt, CultureInfo.InvariantCulture);
     }
+}
+
+@section Scripts {
+<script>
+    // Bucket boundaries are computed and formatted server-side, which shows the
+    // server's time zone (UTC in production). Re-render the chart's tooltips and axis
+    // labels in the viewer's local time so they match the wall clock — mirroring how
+    // the log viewer localises its timestamps. The server-rendered text is a no-JS
+    // fallback that this overwrites on load.
+    (function () {
+        var bucketMinutes = @Model.Stats.BucketMinutes;
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        var hhmm = function (d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+        var monthDay = function (d) { return months[d.getMonth()] + ' ' + d.getDate(); };
+
+        function tooltipLabel(d) {
+            return bucketMinutes >= 1440 ? monthDay(d) : monthDay(d) + ' ' + hhmm(d);
+        }
+        function axisLabel(d) {
+            if (bucketMinutes >= 1440) return monthDay(d);
+            if (bucketMinutes >= 360) return weekdays[d.getDay()] + ' ' + hhmm(d);
+            return hhmm(d);
+        }
+
+        document.querySelectorAll('.chart-col[data-start]').forEach(function (col) {
+            var d = new Date(col.getAttribute('data-start'));
+            var total = Number(col.getAttribute('data-total'));
+            col.setAttribute('title', tooltipLabel(d) + ': ' + total.toLocaleString() +
+                ' logs (' + col.getAttribute('data-err') + ' err, ' + col.getAttribute('data-warn') + ' warn)');
+        });
+
+        document.querySelectorAll('.chart-label[data-start]').forEach(function (label) {
+            label.textContent = axisLabel(new Date(label.getAttribute('data-start')));
+        });
+    })();
+</script>
+    @await Html.PartialAsync("_AutoRefresh")
 }

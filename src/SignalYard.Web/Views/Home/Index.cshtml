@@ -499,5 +499,15 @@
             clearBtn.style.display = 'block';
         }
     }
+
+    // Pause the auto-refresh countdown while the user is mid-interaction — typing or
+    // reading a client-side filter, or reading an expanded entry — so a reload doesn't
+    // wipe their state out from under them. The countdown resumes once they're idle.
+    window.signalYardShouldPauseRefresh = function () {
+        const filtering = filterInput && (filterInput.value || document.activeElement === filterInput);
+        return !!(filtering || expandedLogId);
+    };
 </script>
+
+@await Html.PartialAsync("_AutoRefresh")
 }

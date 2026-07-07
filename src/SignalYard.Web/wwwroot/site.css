@@ -1139,3 +1139,88 @@
         min-width: 2.25rem;
     }
 }
+
+/* Auto-refresh countdown widget (fixed bottom-right corner). */
+.auto-refresh {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem 0.375rem 0.625rem;
+    background-color: var(--bg-crust);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    user-select: none;
+}
+
+.auto-refresh.is-paused {
+    color: var(--text-muted);
+}
+
+.auto-refresh-ring {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+    transform: rotate(-90deg); /* start the depletion at 12 o'clock */
+}
+
+.auto-refresh-ring .ring-track {
+    fill: none;
+    stroke: var(--bg-surface1);
+    stroke-width: 2.5;
+}
+
+.auto-refresh-ring .ring-progress {
+    fill: none;
+    stroke: var(--accent-blue);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.auto-refresh.is-paused .ring-progress {
+    stroke: var(--text-muted);
+}
+
+.auto-refresh-text {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.auto-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    background-color: var(--bg-surface0);
+    border: 1px solid var(--bg-surface1);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auto-refresh-btn:hover {
+    background-color: var(--bg-surface1);
+    color: var(--text-primary);
+}
+
+.auto-refresh-btn svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+}
+
+@media (max-width: 640px) {
+    .auto-refresh {
+        right: 0.5rem;
+        bottom: 0.5rem;
+    }
+}
