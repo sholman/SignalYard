@@ -26,6 +26,19 @@ public class PlaywrightTestBase : PageTest
         }
     }
 
+    /// <summary>
+    /// The shared test server fixture (started on first access). Exposes the host
+    /// service provider so tests can seed example data directly.
+    /// </summary>
+    protected static TestServerFixture ServerFixture
+    {
+        get
+        {
+            EnsureServerStarted();
+            return _serverFixture!;
+        }
+    }
+
     private static void EnsureServerStarted()
     {
         if (_serverFixture != null) return;

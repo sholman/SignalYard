@@ -26,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SignalYard.Core\SignalYard.Core.csproj" />
-    <ProjectReference Include="..\SignalYard.Web\SignalYard.Web.csproj" />
+    <ProjectReference Include="..\..\src\SignalYard.Core\SignalYard.Core.csproj" />
+    <ProjectReference Include="..\..\src\SignalYard.Web\SignalYard.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

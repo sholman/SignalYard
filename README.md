@@ -5,14 +5,39 @@ A lightweight, self-hosted structured logging tool designed to run in Azure App 
 ## Features
 
 - 🔍 **Log Viewer** - Query and search logs with a dark-themed UI
+- 📊 **Dashboard** - Log volume, error/warning trends, and per-application breakdown
+- 🤖 **AI log investigation** - Built-in [MCP server](#mcp-endpoint-ai-log-investigation) for querying logs from Claude Code, VS Code, and other AI tools
 - 📱 **Application Management** - Create and manage applications with API keys
 - 🔐 **Secure** - Entra ID authentication for UI, API keys for ingestion
 - 💰 **Cost-effective** - Uses Azure Table Storage (pennies/month)
 - 🧹 **Auto-cleanup** - Configurable retention with automatic partition deletion
 
+## Screenshots
+
+<!-- These images are generated from seeded example data by
+     tests/SignalYard.Playwright/Tests/DocumentationScreenshots.cs — see TESTING.md to regenerate. -->
+
+### Dashboard
+
+Log volume over time with error/warning counts and a per-application breakdown.
+
+![SignalYard dashboard](docs/images/dashboard.png)
+
+### Log viewer
+
+Search and filter structured logs by application, level, and time range.
+
+![SignalYard log viewer](docs/images/log-viewer.png)
+
+### Applications
+
+Create and manage applications and their ingestion API keys.
+
+![SignalYard applications](docs/images/applications.png)
+
 ## Prerequisites
 
-- .NET 9 SDK
+- .NET 10 SDK
 - Azure Storage Account (or Azurite for local development)
 - Azure Entra ID app registration (for production)
 
@@ -40,7 +65,7 @@ For Entra ID authentication in development, you can either:
 ### 3. Run the Application
 
 ```bash
-cd SignalYard.Web
+cd src/SignalYard.Web
 dotnet run
 ```
 
@@ -235,15 +260,20 @@ claude mcp add --transport http signalyard https://your-signalyard.azurewebsites
 
 ```
 SignalYard/
-├── SignalYard.Core/           # Domain layer
-│   ├── Entities/           # Table Storage entities
-│   ├── Models/             # DTOs and request/response models
-│   └── Services/           # Business logic services
-└── SignalYard.Web/            # Blazor Server application
-    ├── Auth/               # API key authentication
-    ├── Components/         # Blazor pages and layouts
-    ├── Endpoints/          # Minimal API endpoints
-    └── Services/           # Background services
+├── src/
+│   ├── SignalYard.Core/        # Domain layer
+│   │   ├── Entities/           # Table Storage entities
+│   │   ├── Models/             # DTOs and request/response models
+│   │   └── Services/           # Business logic services
+│   └── SignalYard.Web/         # ASP.NET Core MVC application
+│       ├── Auth/               # API key authentication
+│       ├── Controllers/        # MVC controllers
+│       ├── Views/              # Razor views
+│       ├── Endpoints/          # Minimal API ingestion endpoints
+│       └── Services/           # Background services
+└── tests/
+    ├── SignalYard.Tests/       # Unit & integration tests (xUnit)
+    └── SignalYard.Playwright/  # End-to-end browser tests (Playwright + NUnit)
 ```
 
 ## Table Storage Schema

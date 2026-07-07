@@ -20,6 +20,13 @@ public class TestServerFixture : IDisposable
     private IHost? _host;
     public string BaseUrl { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// The running host's service provider, so tests can seed data directly
+    /// through the same services (and storage) the app uses.
+    /// </summary>
+    public IServiceProvider Services =>
+        _host?.Services ?? throw new InvalidOperationException("Test server has not been started.");
+
     public async Task StartAsync()
     {
         if (_host != null) return;
@@ -154,45 +161,38 @@ public class MockTableServiceClient
 public static class TestServerExtensions
 {
     /// <summary>
-    /// Finds the SignalYard.Web project directory by walking up from the current directory
+    /// Finds the solution root by walking up from the current directory until
+    /// SignalYard.sln is found.
+    /// </summary>
+    public static string FindSolutionRoot()
+    {
+        var dir = Directory.GetCurrentDirectory();
+        while (!string.IsNullOrEmpty(dir))
+        {
+            if (File.Exists(Path.Combine(dir, "SignalYard.sln")))
+            {
+                return dir;
+            }
+
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        throw new InvalidOperationException(
+            $"Could not find SignalYard.sln above current directory: {Directory.GetCurrentDirectory()}");
+    }
+
+    /// <summary>
+    /// Finds the SignalYard.Web project directory (src/SignalYard.Web under the solution root).
     /// </summary>
     public static string FindWebProjectPath()
     {
-        // Start from current directory and look for SignalYard.Web
-        var currentDir = Directory.GetCurrentDirectory();
-        var searchDir = currentDir;
-        
-        // Walk up to find the solution root
-        while (!string.IsNullOrEmpty(searchDir))
+        var webProjectPath = Path.Combine(FindSolutionRoot(), "src", "SignalYard.Web");
+        if (!File.Exists(Path.Combine(webProjectPath, "SignalYard.Web.csproj")))
         {
-            var webProjectPath = Path.Combine(searchDir, "SignalYard.Web");
-            if (Directory.Exists(webProjectPath) && File.Exists(Path.Combine(webProjectPath, "SignalYard.Web.csproj")))
-            {
-                return webProjectPath;
-            }
-            
-            // Also check if we're in a bin folder and need to go up multiple levels
-            var potentialSolutionDir = Path.GetDirectoryName(searchDir);
-            if (potentialSolutionDir != null)
-            {
-                var parentWebPath = Path.Combine(potentialSolutionDir, "SignalYard.Web");
-                if (Directory.Exists(parentWebPath) && File.Exists(Path.Combine(parentWebPath, "SignalYard.Web.csproj")))
-                {
-                    return parentWebPath;
-                }
-            }
-            
-            searchDir = Path.GetDirectoryName(searchDir);
-        }
-        
-        // Fallback: Try relative paths from test output directory
-        // bin/Debug/net10.0 -> ../../../SignalYard.Web
-        var binRelativePath = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "SignalYard.Web"));
-        if (Directory.Exists(binRelativePath))
-        {
-            return binRelativePath;
+            throw new InvalidOperationException(
+                $"Could not find SignalYard.Web project at expected path: {webProjectPath}");
         }
 
-        throw new InvalidOperationException($"Could not find SignalYard.Web project directory. Current directory: {currentDir}");
+        return webProjectPath;
     }
 }
