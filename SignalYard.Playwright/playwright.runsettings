@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <TestRunParameters>
+    <!-- Base URL for the SignalYard application -->
+    <Parameter name="SIGNALYARD_BASE_URL" value="https://localhost:7001" />
+  </TestRunParameters>
+  
+  <Playwright>
+    <!-- Browser to use: chromium, firefox, or webkit -->
+    <BrowserName>chromium</BrowserName>
+    
+    <!-- Launch options -->
+    <LaunchOptions>
+      <Headless>true</Headless>
+      <SlowMo>0</SlowMo>
+    </LaunchOptions>
+    
+    <!-- Timeouts -->
+    <ExpectTimeout>5000</ExpectTimeout>
+  </Playwright>
+  
+  <NUnit>
+    <!-- Number of test workers. Set to 1 for sequential execution -->
+    <NumberOfTestWorkers>1</NumberOfTestWorkers>
+  </NUnit>
+  
+  <RunConfiguration>
+    <!-- Test result directory -->
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+  </RunConfiguration>
+</RunSettings>

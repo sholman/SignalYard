@@ -1,0 +1,214 @@
+@using System.Globalization
+@using SignalYard.Core.Models
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var stats = Model.Stats;
+    var maxBucketTotal = stats.Buckets.Count > 0 ? stats.Buckets.Max(b => b.Total) : 0;
+
+    string Enc(string s) => Uri.EscapeDataString(s);
+
+    // Builds a deep link into the log viewer with pre-applied filters.
+    string LogsUrl(string? level = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? app = null)
+    {
+        var a = app ?? Model.SelectedApplication;
+        var q = new List<string>();
+        if (from.HasValue && to.HasValue)
+        {
+            q.Add("timeRange=custom");
+            q.Add("customFrom=" + Enc(from.Value.ToString("yyyy-MM-ddTHH:mm:ss")));
+            q.Add("customTo=" + Enc(to.Value.ToString("yyyy-MM-ddTHH:mm:ss")));
+        }
+        else
+        {
+            q.Add("timeRange=" + Enc(Model.SelectedTimeRange));
+        }
+        if (!string.IsNullOrEmpty(level)) q.Add("level=" + Enc(level));
+        if (!string.IsNullOrEmpty(a)) q.Add("application=" + Enc(a));
+        return "/logs?" + string.Join("&", q);
+    }
+
+    string DashUrl(string range) =>
+        "/dashboard?timeRange=" + Enc(range) +
+        (string.IsNullOrEmpty(Model.SelectedApplication) ? "" : "&application=" + Enc(Model.SelectedApplication));
+
+    var ranges = new[] { ("24h", "24h"), ("7d", "7d"), ("30d", "30d") };
+    var labelStep = Math.Max(1, (int)Math.Ceiling(stats.Buckets.Count / 8.0));
+    // Keep bars at least ~16px wide; on narrow screens the chart scrolls
+    // horizontally rather than squishing bars into unreadable slivers.
+    var chartMinWidth = stats.Buckets.Count * 16;
+}
+
+<div class="dashboard">
+    <div class="toolbar">
+        <div class="toolbar-row">
+            <div class="filter-group">
+                <label>Application</label>
+                <select id="dashApplicationSelect"
+                        onchange="var v=this.value; window.location.href='/dashboard?timeRange=@Model.SelectedTimeRange'+(v?'&application='+encodeURIComponent(v):'');">
+                    <option value="">All Applications</option>
+                    @foreach (var app in Model.Applications)
+                    {
+                        <option value="@app.Name" selected="@(Model.SelectedApplication == app.Name)">@app.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Time Range</label>
+                <div class="time-range-buttons">
+                    @foreach (var (value, label) in ranges)
+                    {
+                        <a class="btn btn-sm @(Model.SelectedTimeRange == value ? "btn-active" : "btn-secondary")"
+                           href="@DashUrl(value)">@label</a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-error">@Model.ErrorMessage</div>
+    }
+
+    @if (stats.IsApproximate)
+    {
+        <div class="alert alert-warning">
+            Counts are approximate — the time range contains more events than can be scanned. Narrow the range for exact totals.
+        </div>
+    }
+
+    <div class="stat-grid">
+        <a class="stat-card stat-total" href="@LogsUrl()">
+            <span class="stat-label">Total Logs</span>
+            <span class="stat-value">@stats.TotalCount.ToString("N0")</span>
+        </a>
+        <a class="stat-card stat-error" href="@LogsUrl(level: "Error")" title="Error and Fatal entries">
+            <span class="stat-label">Errors</span>
+            <span class="stat-value">@stats.ErrorCount.ToString("N0")</span>
+        </a>
+        <a class="stat-card stat-warning" href="@LogsUrl(level: "Warning")">
+            <span class="stat-label">Warnings</span>
+            <span class="stat-value">@stats.WarningCount.ToString("N0")</span>
+        </a>
+        <a class="stat-card stat-info" href="@LogsUrl(level: "Information")">
+            <span class="stat-label">Information</span>
+            <span class="stat-value">@stats.InformationCount.ToString("N0")</span>
+        </a>
+    </div>
+
+    @if (stats.TotalCount == 0)
+    {
+        <div class="no-results">
+            <span class="no-results-icon">📊</span>
+            <p>No logs recorded for the selected range. Once your applications start sending logs they'll appear here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card chart-card">
+            <div class="chart-header">
+                <h2>Log Volume <span class="chart-peak">busiest bar @maxBucketTotal.ToString("N0") logs</span></h2>
+                <div class="chart-legend">
+                    <span class="legend-item"><span class="legend-dot dot-err"></span>Errors</span>
+                    <span class="legend-item"><span class="legend-dot dot-wrn"></span>Warnings</span>
+                    <span class="legend-item"><span class="legend-dot dot-oth"></span>Other</span>
+                </div>
+            </div>
+
+            <div class="chart-scroll">
+            <div class="chart-area" style="min-width:@(chartMinWidth)px">
+                @foreach (var b in stats.Buckets)
+                {
+                    // Square-root scale: keeps low-volume buckets visible next to a
+                    // dominant spike (a linear scale flattens them to nothing). A
+                    // per-bar minimum height is enforced in CSS as a safety net.
+                    var barPct = maxBucketTotal > 0 ? Math.Sqrt((double)b.Total / maxBucketTotal) * 100 : 0;
+                    var errPct = b.Total > 0 ? (double)b.Errors / b.Total * 100 : 0;
+                    var wrnPct = b.Total > 0 ? (double)b.Warnings / b.Total * 100 : 0;
+                    var othPct = b.Total > 0 ? (double)b.Others / b.Total * 100 : 0;
+                    <a class="chart-col" href="@LogsUrl(from: b.Start, to: b.End)"
+                       title="@BucketLabel(b, stats.BucketMinutes): @b.Total.ToString("N0") logs (@b.Errors err, @b.Warnings warn)">
+                        <span class="chart-bar-inner" style="height:@P(barPct)%">
+                            @if (b.Errors > 0)
+                            {
+                                <span class="seg seg-err" style="height:@P(errPct)%"></span>
+                            }
+                            @if (b.Warnings > 0)
+                            {
+                                <span class="seg seg-wrn" style="height:@P(wrnPct)%"></span>
+                            }
+                            @if (b.Others > 0)
+                            {
+                                <span class="seg seg-oth" style="height:@P(othPct)%"></span>
+                            }
+                        </span>
+                    </a>
+                }
+            </div>
+
+            <div class="chart-labels" style="min-width:@(chartMinWidth)px">
+                @for (var i = 0; i < stats.Buckets.Count; i++)
+                {
+                    <span class="chart-label">@(i % labelStep == 0 ? AxisLabel(stats.Buckets[i], stats.BucketMinutes) : "")</span>
+                }
+            </div>
+            </div>
+        </div>
+
+        @if (string.IsNullOrEmpty(Model.SelectedApplication) && stats.Applications.Count > 0)
+        {
+            <div class="card breakdown-card">
+                <div class="chart-header">
+                    <h2>By Application</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th class="num">Total</th>
+                            <th class="num">Errors</th>
+                            <th class="num">Warnings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var app in stats.Applications)
+                        {
+                            <tr>
+                                <td data-label="Application">
+                                    <a class="app-link" href="@LogsUrl(app: app.Application)">@app.Application</a>
+                                </td>
+                                <td data-label="Total" class="num">
+                                    <a class="count-link" href="@LogsUrl(app: app.Application)">@app.Total.ToString("N0")</a>
+                                </td>
+                                <td data-label="Errors" class="num">
+                                    <a class="count-link @(app.Errors > 0 ? "count-error" : "")" href="@LogsUrl(level: "Error", app: app.Application)">@app.Errors.ToString("N0")</a>
+                                </td>
+                                <td data-label="Warnings" class="num">
+                                    <a class="count-link @(app.Warnings > 0 ? "count-warn" : "")" href="@LogsUrl(level: "Warning", app: app.Application)">@app.Warnings.ToString("N0")</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</div>
+
+@functions {
+    static string P(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+
+    static string BucketLabel(LogTimeBucket b, int bucketMinutes)
+    {
+        var fmt = bucketMinutes >= 1440 ? "MMM d" : "MMM d HH:mm";
+        return b.Start.DateTime.ToString(fmt, CultureInfo.InvariantCulture);
+    }
+
+    static string AxisLabel(LogTimeBucket b, int bucketMinutes)
+    {
+        var fmt = bucketMinutes >= 1440 ? "MMM d" : bucketMinutes >= 360 ? "ddd HH:mm" : "HH:mm";
+        return b.Start.DateTime.ToString(fmt, CultureInfo.InvariantCulture);
+    }
+}

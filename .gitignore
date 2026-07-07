@@ -1,0 +1,35 @@
+# SignalYard Build Artifacts
+bin/
+obj/
+/publish/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.code-workspace
+
+# Azurite (local storage emulator)
+azurite/
+__blobstorage__/
+__queuestorage__/
+__tablestorage__/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+appsettings.*.local.json
+secrets.json
+
+# Deployment / publish (keep Azure & environment details out of the repo)
+**/PublishProfiles/
+**/serviceDependencies.json
+**/serviceDependencies.local.json
+*.pubxml
+*.pubxml.user

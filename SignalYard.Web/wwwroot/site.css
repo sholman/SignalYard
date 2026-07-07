@@ -1,0 +1,1141 @@
+/* Layout styles */
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--bg-crust);
+    border-bottom: 1px solid var(--bg-surface0);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.brand:hover {
+    text-decoration: none;
+}
+
+.brand:hover .brand-name {
+    color: var(--accent-blue);
+}
+
+.brand-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.brand-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.user-name {
+    font-size: 0.875rem;
+}
+
+.sign-out-link {
+    color: var(--accent-red);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.sign-out-link:hover {
+    text-decoration: underline;
+}
+
+.main-content {
+    flex: 1;
+    padding: 1.5rem 2rem;
+    background-color: var(--bg-mantle);
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Log Viewer styles */
+.log-viewer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.toolbar {
+    background-color: var(--bg-crust);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.toolbar-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.toolbar-row + .toolbar-row {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bg-surface0);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.filter-group label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.filter-group select,
+.filter-group input {
+    min-width: 180px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+/* Give every toolbar control the same height and box model so selects,
+   toggle buttons and action buttons line up as one cohesive strip. */
+.toolbar .filter-group select,
+.toolbar .filter-group input,
+.toolbar .time-range-buttons .btn,
+.toolbar .filter-actions .btn {
+    height: 2.5rem;
+    box-sizing: border-box;
+}
+
+/* Match the Reset button to the toggle/select controls (secondary, bordered)
+   so the whole toolbar shares one style. Scoped to the toolbar only. */
+.toolbar .filter-actions .btn-secondary {
+    background-color: var(--bg-surface0);
+    border: 1px solid var(--bg-surface1);
+    color: var(--text-secondary);
+}
+
+.toolbar .filter-actions .btn-secondary:hover {
+    background-color: var(--bg-surface1);
+    color: var(--text-primary);
+}
+
+.time-range-buttons {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.time-range-buttons .btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    height: 2.5rem;
+    background-color: var(--bg-surface0);
+    border: 1px solid var(--bg-surface1);
+    color: var(--text-secondary);
+}
+
+.time-range-buttons .btn-sm:hover {
+    background-color: var(--bg-surface1);
+}
+
+.time-range-buttons .btn-active {
+    background-color: var(--accent-blue) !important;
+    border-color: var(--accent-blue) !important;
+    color: var(--bg-base) !important;
+}
+
+.search-group {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
+.search-group input {
+    flex: 1;
+}
+
+.search-input-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-wrapper input {
+    width: 100%;
+    padding-right: 2rem;
+}
+
+.btn-clear-search {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    border-radius: 0.25rem;
+    display: none;
+}
+
+.search-input-wrapper input:not(:placeholder-shown) + .btn-clear-search {
+    display: block;
+}
+
+.btn-clear-search:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-surface0);
+}
+
+.result-count {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.spinner-inline {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 0.5rem;
+}
+
+.no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.no-results-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Sticky date separators grouping log entries by day. Inserted client-side. */
+.log-date-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.625rem 0.25rem 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background-color: var(--bg-mantle);
+}
+
+.log-date-header:first-child {
+    padding-top: 0;
+}
+
+.log-entry {
+    background-color: var(--bg-crust);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.375rem;
+    transition: border-color 0.15s;
+}
+
+.log-entry:hover {
+    border-color: var(--bg-surface1);
+}
+
+.log-entry.expanded {
+    border-color: var(--accent-blue);
+}
+
+.log-entry.level-error {
+    border-left: 3px solid var(--accent-red);
+}
+
+.log-entry.level-warning {
+    border-left: 3px solid var(--accent-yellow);
+}
+
+.log-summary {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+
+.log-entry.expanded .log-summary {
+    align-items: flex-start;
+}
+
+.log-message-line {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-primary);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.log-entry.expanded .log-message-line {
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+}
+
+.log-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.log-level {
+    flex-shrink: 0;
+    width: 2.75rem;
+    justify-content: center;
+}
+
+.log-timestamp {
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.log-relative-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.log-relative-time:not(:empty)::before {
+    content: "(";
+}
+
+.log-relative-time:not(:empty)::after {
+    content: ")";
+}
+
+.log-app-name {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--accent-mauve);
+    background-color: var(--bg-surface0);
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.log-details {
+    padding: 0.75rem;
+    border-top: 1px solid var(--bg-surface0);
+    background-color: var(--bg-mantle);
+}
+
+.detail-section {
+    margin-bottom: 1rem;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.detail-section label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.template-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background-color: var(--bg-base);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+}
+
+.template-box:hover {
+    background-color: var(--bg-mantle);
+}
+
+.template-text {
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.btn-search-inline {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    opacity: 0.4;
+    transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+    flex-shrink: 0;
+}
+
+.template-box:hover .btn-search-inline {
+    opacity: 1;
+}
+
+.btn-search-inline:hover {
+    color: var(--accent-blue);
+    background-color: var(--bg-surface0);
+    opacity: 1;
+}
+
+.detail-section pre {
+    margin: 0;
+    padding: 0.75rem;
+    background-color: var(--bg-base);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.detail-section.exception pre {
+    color: var(--accent-red);
+}
+
+.properties-list {
+    background-color: var(--bg-base);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.property-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-bottom: 1px solid var(--bg-surface0);
+    font-size: 0.8125rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+.property-row:last-child {
+    border-bottom: none;
+}
+
+.property-row:hover {
+    background-color: var(--bg-mantle);
+}
+
+.property-key {
+    color: var(--accent-blue);
+    flex-shrink: 0;
+}
+
+.property-key::after {
+    content: ":";
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.property-value {
+    color: var(--text-primary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-search-property {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    opacity: 0.4;
+    transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.property-row:hover .btn-search-property {
+    opacity: 1;
+}
+
+.btn-search-property:hover {
+    color: var(--accent-blue);
+    background-color: var(--bg-surface0);
+    opacity: 1;
+}
+
+/* Applications page styles */
+.applications-page {
+    width: 100%;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+    margin: 0;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    background-color: var(--bg-crust);
+    border: 1px solid var(--bg-surface0);
+    border-radius: 0.5rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.app-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.app-description {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.api-key-prefix {
+    font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    font-size: 0.8125rem;
+    background-color: var(--bg-surface0);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.alert-dismiss {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: auto;
+    opacity: 0.7;
+}
+
+.alert-dismiss:hover {
+    opacity: 1;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.api-key-display {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.api-key-display code {
+    flex: 1;
+    padding: 0.75rem;
+    background-color: var(--bg-surface0);
+    border: 1px solid var(--bg-surface1);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    word-break: break-all;
+}
+
+/* Dashboard styles */
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    background-color: var(--bg-crust);
+    border: 1px solid var(--bg-surface0);
+    border-left: 3px solid var(--bg-surface1);
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.stat-card:hover {
+    border-color: var(--bg-surface2);
+    text-decoration: none;
+    transform: translateY(-2px);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+}
+
+.stat-total { border-left-color: var(--accent-blue); }
+.stat-error { border-left-color: var(--accent-red); }
+.stat-error .stat-value { color: var(--accent-red); }
+.stat-warning { border-left-color: var(--accent-yellow); }
+.stat-warning .stat-value { color: var(--accent-yellow); }
+.stat-info { border-left-color: var(--accent-blue); }
+
+.chart-card,
+.breakdown-card {
+    padding: 1.25rem;
+}
+
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.chart-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+/* Numeric anchor next to the chart title — the tallest bar equals this count. */
+.chart-peak {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.chart-legend {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.legend-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.dot-err { background-color: var(--accent-red); }
+.dot-wrn { background-color: var(--accent-yellow); }
+.dot-oth { background-color: var(--accent-blue); }
+
+/* Horizontal scroll wrapper so bars stay readable on narrow screens.
+   Both the bars and the axis labels carry the same min-width so they scroll
+   together and stay aligned. */
+.chart-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.chart-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 220px;
+}
+
+.chart-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: 0;
+    border-radius: 3px 3px 0 0;
+    transition: background-color 0.12s;
+}
+
+.chart-col:hover {
+    background-color: var(--bg-surface0);
+}
+
+.chart-bar-inner {
+    width: 100%;
+    max-width: 42px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+}
+
+/* Any bucket with activity renders at least one coloured segment, so
+   :not(:empty) gives non-zero bars a floor height while empty buckets stay flat. */
+.chart-bar-inner:not(:empty) {
+    min-height: 4px;
+}
+
+.seg { width: 100%; }
+.seg-err { background-color: var(--accent-red); }
+.seg-wrn { background-color: var(--accent-yellow); }
+.seg-oth { background-color: var(--accent-blue); }
+
+.chart-labels {
+    display: flex;
+    gap: 2px;
+    margin-top: 0.375rem;
+}
+
+/* Labels are sparse (one every few bars), so let each overflow its own column
+   into the empty neighbours rather than being clipped to a single bar's width.
+   The edge labels align inward so they don't spill outside the chart. */
+.chart-label {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.chart-label:first-child {
+    text-align: left;
+}
+
+.chart-label:last-child {
+    text-align: right;
+}
+
+.breakdown-card th.num,
+.breakdown-card td.num {
+    text-align: right;
+}
+
+.app-link {
+    color: var(--accent-mauve);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.app-link:hover { text-decoration: underline; }
+
+.count-link {
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.count-link:hover { text-decoration: underline; }
+.count-error { color: var(--accent-red); font-weight: 600; }
+.count-warn { color: var(--accent-yellow); font-weight: 600; }
+
+/* Mobile responsive styles for dashboard */
+@media (max-width: 768px) {
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .chart-area {
+        height: 200px;
+    }
+
+    .chart-label {
+        font-size: 0.625rem;
+    }
+}
+
+/* Mobile responsive styles for layout */
+@media (max-width: 768px) {
+    .top-bar {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .brand {
+        order: 1;
+    }
+
+    .user-info {
+        order: 2;
+        margin-left: auto;
+    }
+
+    .nav-links {
+        order: 3;
+        width: 100%;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--bg-surface0);
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .brand-name {
+        font-size: 1rem;
+    }
+
+    .brand-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+}
+
+/* Mobile responsive styles for log viewer */
+@media (max-width: 768px) {
+    .toolbar {
+        padding: 0.75rem;
+    }
+
+    .toolbar-row {
+        gap: 0.75rem;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 140px;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .time-range-buttons {
+        flex-wrap: wrap;
+    }
+
+    .time-range-buttons .btn-sm {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+
+    .log-summary {
+        padding: 0.5rem;
+    }
+
+    .log-message-line {
+        font-size: 0.875rem;
+    }
+
+    .log-timestamp {
+        font-size: 0.875rem;
+    }
+
+    .log-meta-line {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+    }
+
+    .log-app-name {
+        font-size: 0.6875rem;
+    }
+
+    .search-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .result-count {
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar {
+        padding: 0.5rem;
+    }
+
+    .toolbar-row {
+        gap: 0.5rem;
+    }
+
+    .filter-group label {
+        font-size: 0.6875rem;
+    }
+
+    .time-range-buttons .btn-sm {
+        padding: 0.25rem 0.375rem;
+        font-size: 0.75rem;
+        height: auto;
+    }
+
+    .log-entry {
+        border-radius: 0.25rem;
+    }
+
+    .log-level {
+        font-size: 0.6875rem;
+        padding: 0.125rem 0.375rem;
+        width: 2.5rem;
+    }
+
+    .log-timestamp {
+        font-size: 0.8125rem;
+    }
+
+    .log-message-line {
+        font-size: 0.8125rem;
+    }
+
+    .detail-section pre {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+}
+
+/* Mobile responsive styles for applications page */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Convert table to card layout on mobile */
+    table {
+        display: block;
+    }
+
+    thead {
+        display: none;
+    }
+
+    tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    tr {
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-crust);
+        border: 1px solid var(--bg-surface0);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+
+    td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.25rem 0;
+        border: none;
+    }
+
+    td::before {
+        content: attr(data-label);
+        font-weight: 500;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+
+    .action-buttons {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .modal {
+        width: 95%;
+        min-width: 0;
+        max-width: none;
+        margin: 1rem;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .action-buttons {
+        gap: 0.25rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.375rem;
+        font-size: 0.6875rem;
+    }
+
+    .api-key-prefix {
+        font-size: 0.75rem;
+    }
+
+    .api-key-display code {
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+}
+
+/* Touch-device refinements: hover-reveal affordances don't work without a
+   pointer, and controls need a comfortable tap target. */
+@media (hover: none) and (pointer: coarse) {
+    /* Show the "filter by this" arrows permanently — there's no hover. */
+    .btn-search-inline,
+    .btn-search-property {
+        opacity: 1;
+    }
+
+    /* Ensure interactive controls meet a ~44px minimum tap target. The toolbar
+       selects/inputs are included so the whole filter strip stays one height. */
+    .toolbar .filter-group select,
+    .toolbar .filter-group input,
+    .time-range-buttons .btn,
+    .filter-actions .btn,
+    .action-buttons .btn,
+    .btn-search-inline,
+    .btn-search-property,
+    .btn-clear-search,
+    .alert-dismiss {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+    }
+
+    /* Keep the log-row arrows from stretching the row height. */
+    .property-row .btn-search-property,
+    .template-box .btn-search-inline {
+        min-height: 2.25rem;
+        min-width: 2.25rem;
+    }
+}

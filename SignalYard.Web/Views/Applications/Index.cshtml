@@ -1,0 +1,274 @@
+@model ApplicationsViewModel
+@{
+    ViewData["Title"] = "Applications";
+}
+
+<div class="applications-page">
+    <div class="page-header">
+        <h1>Applications</h1>
+        <button class="btn btn-primary" onclick="showCreateDialog()">
+            + Add Application
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-error">
+            @Model.ErrorMessage
+            <button class="alert-dismiss" onclick="this.parentElement.remove()">×</button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success">
+            @Model.SuccessMessage
+            <button class="alert-dismiss" onclick="this.parentElement.remove()">×</button>
+        </div>
+    }
+
+    @if (Model.Applications.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="empty-icon">📱</span>
+            <h2>No applications yet</h2>
+            <p>Create your first application to start collecting logs.</p>
+            <button class="btn btn-primary" onclick="showCreateDialog()">+ Add Application</button>
+        </div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>API Key</th>
+                    <th>Status</th>
+                    <th>Retention</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var app in Model.Applications)
+                {
+                    <tr>
+                        <td data-label="Name">
+                            <div class="app-name">@app.Name</div>
+                            @if (!string.IsNullOrEmpty(app.Description))
+                            {
+                                <div class="app-description">@app.Description</div>
+                            }
+                        </td>
+                        <td data-label="API Key">
+                            <code class="api-key-prefix">@app.ApiKeyPrefix...</code>
+                        </td>
+                        <td data-label="Status">
+                            <span class="badge @(app.Enabled ? "badge-enabled" : "badge-disabled")">
+                                @(app.Enabled ? "Enabled" : "Disabled")
+                            </span>
+                        </td>
+                        <td data-label="Retention">@app.RetentionDays days</td>
+                        <td data-label="Created">@app.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td data-label="">
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary btn-sm" onclick="showEditDialog('@app.Name', '@System.Web.HttpUtility.JavaScriptStringEncode(app.Description ?? "")', @app.RetentionDays, @(app.Enabled ? "true" : "false"))">Edit</button>
+                                <button class="btn btn-secondary btn-sm" onclick="showRegenerateDialog('@app.Name')">Regenerate Key</button>
+                                <button class="btn btn-danger btn-sm" onclick="showDeleteDialog('@app.Name')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<!-- Create/Edit Dialog -->
+<div class="modal-backdrop" id="createEditModal" style="display: none;" onclick="closeDialogs()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Create Application</h2>
+            <button class="modal-close" onclick="closeDialogs()">×</button>
+        </div>
+        <div class="modal-body">
+            <form method="post" id="createEditForm">
+                @Html.AntiForgeryToken()
+                
+                <div class="form-group">
+                    <label for="formName">Name</label>
+                    <input type="text" id="formName" name="Name" placeholder="my-app" pattern="^[a-zA-Z0-9_-]+$" required />
+                    <span class="validation-message" id="nameValidation"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="formDescription">Description (optional)</label>
+                    <input type="text" id="formDescription" name="Description" placeholder="Application description" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="formRetention">Retention (days)</label>
+                    <input type="number" id="formRetention" name="RetentionDays" min="1" max="3650" value="365" required />
+                </div>
+                
+                <div class="form-group checkbox-group" id="enabledGroup" style="display: none;">
+                    <label>
+                        <input type="checkbox" id="formEnabled" name="Enabled" value="true" checked />
+                        <span>Enable log ingestion</span>
+                    </label>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDialogs()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- API Key Display Dialog -->
+@if (!string.IsNullOrEmpty(Model.GeneratedApiKey))
+{
+    <div class="modal-backdrop" id="apiKeyModal">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">API Key Generated</h2>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Important:</strong> Copy this API key now. You won't be able to see it again!
+                </div>
+                
+                <div class="form-group">
+                    <label>API Key</label>
+                    <div class="api-key-display">
+                        <code class="mono" id="generatedApiKey">@Model.GeneratedApiKey</code>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="copyApiKey()">Copy</button>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="document.getElementById('apiKeyModal').remove()">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Regenerate Key Confirmation Dialog -->
+<div class="modal-backdrop" id="regenerateModal" style="display: none;" onclick="closeDialogs()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">Regenerate API Key</h2>
+            <button class="modal-close" onclick="closeDialogs()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning">
+                This will invalidate the current API key for <strong id="regenerateAppName"></strong>. 
+                Any applications using the current key will stop sending logs.
+            </div>
+            
+            <form method="post" asp-action="RegenerateKey">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="name" id="regenerateNameInput" />
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDialogs()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Regenerate Key</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Dialog -->
+<div class="modal-backdrop" id="deleteModal" style="display: none;" onclick="closeDialogs()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">Delete Application</h2>
+            <button class="modal-close" onclick="closeDialogs()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-error">
+                Are you sure you want to delete <strong id="deleteAppName"></strong>? 
+                This will invalidate the API key. Log data will not be deleted automatically.
+            </div>
+            
+            <form method="post" asp-action="Delete">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="name" id="deleteNameInput" />
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDialogs()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let isEditing = false;
+    let editingName = null;
+
+    function showCreateDialog() {
+        isEditing = false;
+        editingName = null;
+        document.getElementById('modalTitle').textContent = 'Create Application';
+        document.getElementById('submitBtn').textContent = 'Create';
+        document.getElementById('createEditForm').action = '@Url.Action("Create")';
+        document.getElementById('formName').value = '';
+        document.getElementById('formName').disabled = false;
+        document.getElementById('formDescription').value = '';
+        document.getElementById('formRetention').value = '365';
+        document.getElementById('formEnabled').checked = true;
+        document.getElementById('enabledGroup').style.display = 'none';
+        document.getElementById('createEditModal').style.display = 'flex';
+    }
+
+    function showEditDialog(name, description, retention, enabled) {
+        isEditing = true;
+        editingName = name;
+        document.getElementById('modalTitle').textContent = 'Edit Application';
+        document.getElementById('submitBtn').textContent = 'Save';
+        document.getElementById('createEditForm').action = '@Url.Action("Edit")?name=' + encodeURIComponent(name);
+        document.getElementById('formName').value = name;
+        document.getElementById('formName').disabled = true;
+        document.getElementById('formDescription').value = description;
+        document.getElementById('formRetention').value = retention;
+        document.getElementById('formEnabled').checked = enabled;
+        document.getElementById('enabledGroup').style.display = 'block';
+        document.getElementById('createEditModal').style.display = 'flex';
+    }
+
+    function showRegenerateDialog(name) {
+        document.getElementById('regenerateAppName').textContent = name;
+        document.getElementById('regenerateNameInput').value = name;
+        document.getElementById('regenerateModal').style.display = 'flex';
+    }
+
+    function showDeleteDialog(name) {
+        document.getElementById('deleteAppName').textContent = name;
+        document.getElementById('deleteNameInput').value = name;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDialogs() {
+        document.getElementById('createEditModal').style.display = 'none';
+        document.getElementById('regenerateModal').style.display = 'none';
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    function copyApiKey() {
+        const apiKey = document.getElementById('generatedApiKey').textContent;
+        navigator.clipboard.writeText(apiKey);
+    }
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDialogs();
+        }
+    });
+</script>
+}

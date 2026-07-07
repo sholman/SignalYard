@@ -1,0 +1,164 @@
+# SignalYard Tests
+
+This directory contains the test suite for SignalYard, including unit tests and Playwright end-to-end tests.
+
+## Test Projects
+
+### SignalYard.Tests (Unit & Integration Tests)
+
+Unit tests using xUnit and FluentAssertions.
+
+**Run Unit Tests:**
+```bash
+cd SignalYard.Tests
+dotnet test
+```
+
+**Test Categories:**
+- **ApiKeyServiceTests** - Tests for API key generation, hashing, and validation
+- **LogEntryTests** - Tests for log entry entity and partition/row key generation
+- **ClefLogEventTests** - Tests for CLEF format parsing and serialization
+- **ViewModelValidationTests** - Tests for model validation attributes
+- **QueryModelsTests** - Tests for query request/response models
+- **ApplicationModelsTests** - Tests for application DTOs and requests
+- **Integration Tests** - Tests using WebApplicationFactory for API endpoint testing
+
+### SignalYard.Playwright (End-to-End Tests)
+
+Browser-based tests using Playwright and NUnit.
+
+**First-time Setup:**
+```bash
+cd SignalYard.Playwright
+dotnet build
+pwsh bin/Debug/net10.0/playwright.ps1 install
+```
+
+**Run Playwright Tests:**
+```bash
+# Run all tests (headless)
+dotnet test
+
+# Run with specific settings
+dotnet test --settings playwright.runsettings
+
+# Run with headed browser (for debugging)
+$env:HEADED = "1"
+dotnet test
+
+# Run specific test category
+dotnet test --filter "Category=Authenticated"
+```
+
+**Environment Variables:**
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SIGNALYARD_BASE_URL` | Application URL to test | `https://localhost:7001` |
+| `SIGNALYARD_TEST_EMAIL` | Test user email (for auth tests) | - |
+| `SIGNALYARD_TEST_PASSWORD` | Test user password | - |
+| `SIGNALYARD_TEST_API_KEY` | Valid API key for API tests | - |
+| `SIGNALYARD_AUTH_STATE_PATH` | Path to saved auth state | - |
+| `PLAYWRIGHT_RECORD_VIDEO` | Set to "true" to record videos | - |
+| `HEADED` | Set to "1" for headed mode | - |
+
+## Test Coverage
+
+### Unit Tests Cover:
+- ✅ API key generation with proper prefix (`sy_`)
+- ✅ API key hashing (SHA256)
+- ✅ API key prefix extraction
+- ✅ Unique key generation
+- ✅ Log entry partition key generation
+- ✅ Log entry row key generation (newest-first ordering)
+- ✅ CLEF log event parsing
+- ✅ Newline-delimited JSON parsing
+- ✅ Model validation (application names, retention days)
+- ✅ Query model defaults and properties
+- ✅ Application DTO serialization
+
+### Integration Tests Cover:
+- ✅ Ingest API authentication (requires API key)
+- ✅ Raw events API authentication
+- ✅ Protected pages redirect to login
+- ✅ Static files accessibility
+
+### Playwright Tests Cover:
+- ✅ Login page accessibility
+- ✅ Page titles and structure
+- ✅ Authentication flow (with credentials)
+- ✅ Home page log viewer elements
+- ✅ Search/filter functionality
+- ✅ Applications page elements
+- ✅ Create application form validation
+- ✅ Edit/delete application flows
+- ✅ API endpoint responses
+- ✅ Accessibility checks (labels, headings, tables)
+- ✅ Console error detection
+
+## Running Tests in CI/CD
+
+### GitHub Actions Example:
+
+```yaml
+- name: Run Unit Tests
+  run: dotnet test SignalYard.Tests --configuration Release --logger trx
+
+- name: Install Playwright
+  run: |
+    cd SignalYard.Playwright
+    dotnet build
+    pwsh bin/Release/net10.0/playwright.ps1 install --with-deps
+
+- name: Run Playwright Tests
+  env:
+    SIGNALYARD_BASE_URL: ${{ secrets.TEST_APP_URL }}
+    SIGNALYARD_TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
+  run: |
+    dotnet test SignalYard.Playwright --configuration Release --logger trx
+```
+
+### Azure DevOps Example:
+
+```yaml
+- task: DotNetCoreCLI@2
+  displayName: 'Run Unit Tests'
+  inputs:
+    command: test
+    projects: 'SignalYard.Tests/SignalYard.Tests.csproj'
+    arguments: '--configuration Release'
+
+- script: |
+    cd SignalYard.Playwright
+    dotnet build
+    pwsh bin/Release/net10.0/playwright.ps1 install --with-deps
+  displayName: 'Install Playwright Browsers'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Run Playwright Tests'
+  inputs:
+    command: test
+    projects: 'SignalYard.Playwright/SignalYard.Playwright.csproj'
+    arguments: '--configuration Release'
+  env:
+    SIGNALYARD_BASE_URL: $(TestAppUrl)
+```
+
+## Debugging Tests
+
+### Visual Studio
+1. Set breakpoints in test code
+2. Right-click test → Debug Test
+
+### VS Code
+1. Install C# Dev Kit extension
+2. Use Test Explorer to debug tests
+
+### Playwright Trace Viewer
+```bash
+# Enable tracing in tests
+$env:PLAYWRIGHT_TRACE = "on"
+dotnet test
+
+# View trace
+npx playwright show-trace trace.zip
+```

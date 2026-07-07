@@ -1,0 +1,503 @@
+@model LogViewerViewModel
+@{
+    ViewData["Title"] = "Log Viewer";
+}
+
+<div class="log-viewer">
+    <form method="get" asp-action="Index" id="searchForm">
+        <div class="toolbar">
+            <div class="toolbar-row">
+                <div class="filter-group">
+                    <label>Application</label>
+                    <select name="Application" id="applicationSelect">
+                        <option value="">All Applications</option>
+                        @foreach (var app in Model.Applications)
+                        {
+                            <option value="@app.Name" selected="@(Model.SelectedApplication == app.Name)">@app.Name</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Time Range</label>
+                    <div class="time-range-buttons">
+                        <button type="button" class="btn btn-sm @(Model.SelectedTimeRange == "24h" ? "btn-active" : "btn-secondary")" 
+                                onclick="selectTimeRange('24h')">24h</button>
+                        <button type="button" class="btn btn-sm @(Model.SelectedTimeRange == "7d" ? "btn-active" : "btn-secondary")" 
+                                onclick="selectTimeRange('7d')">7d</button>
+                        <button type="button" class="btn btn-sm @(Model.SelectedTimeRange == "30d" ? "btn-active" : "btn-secondary")" 
+                                onclick="selectTimeRange('30d')">30d</button>
+                        <button type="button" class="btn btn-sm @(Model.SelectedTimeRange == "custom" ? "btn-active" : "btn-secondary")" 
+                                onclick="selectTimeRange('custom')">Custom</button>
+                    </div>
+                    <input type="hidden" name="TimeRange" id="timeRangeInput" value="@Model.SelectedTimeRange" />
+                </div>
+
+                <div class="filter-group custom-date-group" id="customDateGroup" style="display: @(Model.SelectedTimeRange == "custom" ? "flex" : "none");">
+                    <label>From</label>
+                    <input type="datetime-local" name="CustomFrom" id="customFrom" 
+                           value="@(Model.CustomFromDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                </div>
+                
+                <div class="filter-group custom-date-group" id="customDateGroupTo" style="display: @(Model.SelectedTimeRange == "custom" ? "flex" : "none");">
+                    <label>To</label>
+                    <input type="datetime-local" name="CustomTo" id="customTo" 
+                           value="@(Model.CustomToDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                </div>
+                
+                <div class="filter-group">
+                    <label>Level</label>
+                    <select name="Level" id="levelSelect">
+                        <option value="">All Levels</option>
+                        <option value="Verbose" selected="@(Model.SelectedLevel == "Verbose")">Verbose</option>
+                        <option value="Debug" selected="@(Model.SelectedLevel == "Debug")">Debug</option>
+                        <option value="Information" selected="@(Model.SelectedLevel == "Information")">Information</option>
+                        <option value="Warning" selected="@(Model.SelectedLevel == "Warning")">Warning</option>
+                        <option value="Error" selected="@(Model.SelectedLevel == "Error")">Error</option>
+                        <option value="Fatal" selected="@(Model.SelectedLevel == "Fatal")">Fatal</option>
+                    </select>
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary" id="searchBtn">
+                        Search
+                    </button>
+                    <a class="btn btn-secondary" id="resetBtn" href="/logs" title="Reset all filters to default (all applications, last 24h)">
+                        Reset
+                    </a>
+                </div>
+            </div>
+            
+            @if (Model.Logs.Count > 0)
+            {
+                <div class="toolbar-row search-row">
+                    <div class="filter-group search-group">
+                        <div class="search-input-wrapper">
+                            <input type="text" placeholder="Filter results..." id="filterText" value="@Model.SearchText" />
+                            <button type="button" class="btn-clear-search" id="clearFilterBtn" onclick="clearFilter()" title="Clear filter">×</button>
+                        </div>
+                        <span class="result-count" id="resultCount">@Model.Logs.Count of @Model.Logs.Count results</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </form>
+    
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-error">
+            @Model.ErrorMessage
+        </div>
+    }
+    
+    @if (Model.HasSearched && Model.Logs.Count == 0)
+    {
+        <div class="no-results">
+            <span class="no-results-icon">📭</span>
+            <p>No logs found for the selected criteria.</p>
+        </div>
+    }
+    else if (Model.Logs.Count > 0)
+    {
+        <div class="log-list" id="logList">
+            @foreach (var log in Model.Logs)
+            {
+                <div class="log-entry @GetLevelClass(log.Level)" data-log-id="@log.Id">
+                    <div class="log-summary" onclick="toggleLog('@log.Id')">
+                        <span class="log-timestamp" data-utc="@log.Timestamp.UtcDateTime.ToString("o")">@log.Timestamp.UtcDateTime.ToString("dd MMM yyyy hh:mm tt")</span>
+                        <span class="log-level badge @GetBadgeClass(log.Level)">@GetLevelAbbrev(log.Level)</span>
+                        <span class="log-message-line">@log.Message</span>
+                        @if (string.IsNullOrEmpty(Model.SelectedApplication))
+                        {
+                            <span class="log-app-name">@log.Application</span>
+                        }
+                    </div>
+                    
+                    <div class="log-details" id="details-@log.Id" style="display: none;">
+                        @if (!string.IsNullOrEmpty(log.MessageTemplate))
+                        {
+                            <div class="detail-section">
+                                <label>Message Template</label>
+                                <div class="template-box">
+                                    <button class="btn-search-inline" 
+                                            title="Filter logs with this template"
+                                            onclick="filterByTemplate('@System.Web.HttpUtility.JavaScriptStringEncode(log.MessageTemplate)')" 
+                                            type="button">
+                                        ↗
+                                    </button>
+                                    <span class="template-text mono">@log.MessageTemplate</span>
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (log.Properties != null && log.Properties.Count > 0)
+                        {
+                            <div class="detail-section">
+                                <label>Properties</label>
+                                <div class="properties-list">
+                                    @foreach (var prop in log.Properties)
+                                    {
+                                        var rawValue = GetRawPropertyValue(prop.Value);
+                                        <div class="property-row">
+                                            <button class="btn-search-property" 
+                                                    title="Filter by @prop.Key"
+                                                    onclick="filterByProperty('@System.Web.HttpUtility.JavaScriptStringEncode(prop.Key)', '@System.Web.HttpUtility.JavaScriptStringEncode(rawValue)')"
+                                                    type="button">
+                                                ↗
+                                            </button>
+                                            <span class="property-key">@prop.Key</span>
+                                            <span class="property-value">@FormatPropertyValue(prop.Value)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(log.Exception))
+                        {
+                            <div class="detail-section exception">
+                                <label>Exception</label>
+                                <pre class="mono">@log.Exception</pre>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        
+        @if (Model.IsTruncated)
+        {
+            <div class="alert alert-warning">
+                Results were truncated. Narrow your date range or filters to see all matching logs.
+            </div>
+        }
+    }
+    else if (!Model.HasSearched)
+    {
+        <div class="no-results">
+            <span class="no-results-icon">🔍</span>
+            <p>Select your filters and click Search to view logs.</p>
+        </div>
+    }
+</div>
+
+@functions {
+    static string GetLevelAbbrev(string level) => level switch
+    {
+        "Verbose" => "VRB",
+        "Debug" => "DBG",
+        "Information" => "INF",
+        "Warning" => "WRN",
+        "Error" => "ERR",
+        "Fatal" => "FTL",
+        _ => level.Length >= 3 ? level[..3].ToUpper() : level.ToUpper()
+    };
+
+    static string GetBadgeClass(string level) => level switch
+    {
+        "Verbose" => "badge-vrb",
+        "Debug" => "badge-dbg",
+        "Information" => "badge-inf",
+        "Warning" => "badge-wrn",
+        "Error" => "badge-err",
+        "Fatal" => "badge-ftl",
+        _ => "badge-inf"
+    };
+
+    static string GetLevelClass(string level) => level switch
+    {
+        "Error" or "Fatal" => "level-error",
+        "Warning" => "level-warning",
+        _ => ""
+    };
+
+    static string FormatPropertyValue(object value)
+    {
+        if (value == null) return "null";
+        if (value is System.Text.Json.JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => $"\"{jsonElement.GetString()}\"",
+                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => "null",
+                _ => jsonElement.GetRawText()
+            };
+        }
+        if (value is string s) return $"\"{s}\"";
+        return value.ToString() ?? "null";
+    }
+
+    static string GetRawPropertyValue(object value)
+    {
+        if (value == null) return "";
+        if (value is System.Text.Json.JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => jsonElement.GetString() ?? "",
+                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => "",
+                _ => jsonElement.GetRawText()
+            };
+        }
+        if (value is string s) return s;
+        return value.ToString() ?? "";
+    }
+}
+
+@section Scripts {
+<script>
+    let expandedLogId = null;
+    const logs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Logs, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    
+    // Convert UTC timestamps to local time on page load
+    const monthAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    function formatLocalTime(date) {
+        let hours = date.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const hh = String(hours).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hh}:${minutes} ${ampm}`;
+    }
+
+    function formatDateHeader(date) {
+        const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+        const label = `${String(date.getDate()).padStart(2, '0')} ${monthAbbr[date.getMonth()]} ${date.getFullYear()}`;
+        if (diffDays === 0) return `Today, ${label}`;
+        if (diffDays === 1) return `Yesterday, ${label}`;
+        return `${weekdayNames[date.getDay()]}, ${label}`;
+    }
+
+    // Show local time only on each row and insert a sticky date header whenever
+    // the day changes. Logs arrive newest-first, so a single walk groups them.
+    function renderTimesAndDateGroups() {
+        const logList = document.getElementById('logList');
+        if (!logList) return;
+        let lastDateKey = null;
+        document.querySelectorAll('.log-entry').forEach(entry => {
+            const el = entry.querySelector('.log-timestamp[data-utc]');
+            if (!el) return;
+            const date = new Date(el.getAttribute('data-utc'));
+            el.textContent = formatLocalTime(date);
+
+            const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+            if (dateKey !== lastDateKey) {
+                const header = document.createElement('div');
+                header.className = 'log-date-header';
+                header.textContent = formatDateHeader(date);
+                logList.insertBefore(header, entry);
+                lastDateKey = dateKey;
+            }
+        });
+    }
+
+    // Hide a date header when every entry in its group is filtered out.
+    function updateDateHeaders() {
+        const logList = document.getElementById('logList');
+        if (!logList) return;
+        let currentHeader = null;
+        let visibleInGroup = 0;
+        Array.from(logList.children).forEach(child => {
+            if (child.classList.contains('log-date-header')) {
+                if (currentHeader) currentHeader.style.display = visibleInGroup > 0 ? '' : 'none';
+                currentHeader = child;
+                visibleInGroup = 0;
+            } else if (child.classList.contains('log-entry') && child.style.display !== 'none') {
+                visibleInGroup++;
+            }
+        });
+        if (currentHeader) currentHeader.style.display = visibleInGroup > 0 ? '' : 'none';
+    }
+    
+    // Calculate and display relative time
+    function updateRelativeTimes() {
+        const now = new Date();
+        document.querySelectorAll('.log-relative-time[data-utc]').forEach(el => {
+            const utcStr = el.getAttribute('data-utc');
+            if (utcStr) {
+                const date = new Date(utcStr);
+                const diffMs = now - date;
+                const diffSec = Math.floor(diffMs / 1000);
+                const diffMin = Math.floor(diffSec / 60);
+                const diffHour = Math.floor(diffMin / 60);
+                const diffDay = Math.floor(diffHour / 24);
+                
+                let relative;
+                if (diffSec < 60) {
+                    relative = diffSec <= 1 ? 'just now' : `${diffSec}s ago`;
+                } else if (diffMin < 60) {
+                    relative = diffMin === 1 ? '1 min ago' : `${diffMin} mins ago`;
+                } else if (diffHour < 24) {
+                    relative = diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
+                } else if (diffDay < 30) {
+                    relative = diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
+                } else {
+                    relative = '';
+                }
+                el.textContent = relative;
+            }
+        });
+    }
+    
+    // Run on page load
+    renderTimesAndDateGroups();
+    updateRelativeTimes();
+    
+    function selectTimeRange(range) {
+        document.getElementById('timeRangeInput').value = range;
+        
+        // Update button styles
+        document.querySelectorAll('.time-range-buttons .btn').forEach(btn => {
+            btn.classList.remove('btn-active');
+            btn.classList.add('btn-secondary');
+        });
+        event.target.classList.remove('btn-secondary');
+        event.target.classList.add('btn-active');
+        
+        // Show/hide custom date inputs
+        const customGroups = document.querySelectorAll('.custom-date-group');
+        customGroups.forEach(g => g.style.display = range === 'custom' ? 'flex' : 'none');
+        
+        // Set default custom dates if needed
+        if (range === 'custom') {
+            const now = new Date();
+            const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+            if (!document.getElementById('customFrom').value) {
+                document.getElementById('customFrom').value = formatLocalDateTime(hourAgo);
+            }
+            if (!document.getElementById('customTo').value) {
+                document.getElementById('customTo').value = formatLocalDateTime(now);
+            }
+        }
+    }
+    
+    // Format date for datetime-local input (local timezone)
+    function formatLocalDateTime(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+    
+    function toggleLog(logId) {
+        const details = document.getElementById('details-' + logId);
+        const entry = details.closest('.log-entry');
+        
+        if (expandedLogId === logId) {
+            details.style.display = 'none';
+            entry.classList.remove('expanded');
+            expandedLogId = null;
+        } else {
+            // Close previous
+            if (expandedLogId) {
+                const prevDetails = document.getElementById('details-' + expandedLogId);
+                if (prevDetails) {
+                    prevDetails.style.display = 'none';
+                    prevDetails.closest('.log-entry').classList.remove('expanded');
+                }
+            }
+            details.style.display = 'block';
+            entry.classList.add('expanded');
+            expandedLogId = logId;
+        }
+    }
+    
+    // Client-side filtering
+    const filterInput = document.getElementById('filterText');
+    const clearBtn = document.getElementById('clearFilterBtn');
+    
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            filterLogs(this.value);
+            if (clearBtn) {
+                clearBtn.style.display = this.value ? 'block' : 'none';
+            }
+        });
+    }
+    
+    function filterLogs(searchText) {
+        const entries = document.querySelectorAll('.log-entry');
+        let visibleCount = 0;
+        const searchLower = searchText.toLowerCase();
+        
+        entries.forEach((entry, index) => {
+            const log = logs[index];
+            if (!log) return;
+            
+            let propsMatch = false;
+            if (log.properties) {
+                for (const [k, v] of Object.entries(log.properties)) {
+                    const keyMatch = k.toLowerCase().includes(searchLower);
+                    const valStr = String(v).toLowerCase();
+                    const valMatch = valStr.includes(searchLower);
+                    if (keyMatch || valMatch) {
+                        propsMatch = true;
+                        break;
+                    }
+                }
+            }
+            
+            const matches = !searchText || 
+                log.message.toLowerCase().includes(searchLower) ||
+                (log.messageTemplate && log.messageTemplate.toLowerCase().includes(searchLower)) ||
+                (log.exception && log.exception.toLowerCase().includes(searchLower)) ||
+                propsMatch;
+            
+            entry.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+        
+        const countEl = document.getElementById('resultCount');
+        if (countEl) {
+            countEl.textContent = visibleCount + ' of ' + logs.length + ' results';
+        }
+
+        updateDateHeaders();
+    }
+    
+    function clearFilter() {
+        if (filterInput) {
+            filterInput.value = '';
+            filterLogs('');
+        }
+        if (clearBtn) {
+            clearBtn.style.display = 'none';
+        }
+    }
+    
+    function filterByTemplate(template) {
+        event.stopPropagation();
+        if (filterInput) {
+            filterInput.value = template;
+            filterLogs(template);
+        }
+        if (clearBtn) {
+            clearBtn.style.display = 'block';
+        }
+    }
+    
+    function filterByProperty(key, value) {
+        event.stopPropagation();
+        // Search by the raw value for better matching
+        const searchText = value || key;
+        if (filterInput) {
+            filterInput.value = searchText;
+            filterLogs(searchText);
+        }
+        if (clearBtn) {
+            clearBtn.style.display = 'block';
+        }
+    }
+</script>
+}
