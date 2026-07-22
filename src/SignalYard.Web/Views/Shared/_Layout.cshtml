@@ -1,3 +1,13 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    // Optional per-instance label (config key "InstanceName", overridable via env var).
+    // Lets multiple SignalYard deployments be told apart in the browser tab and header.
+    var instanceName = Configuration["InstanceName"];
+    if (string.IsNullOrWhiteSpace(instanceName))
+    {
+        instanceName = "SignalYard";
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SignalYard - A lightweight, self-hosted structured logging tool for Azure" />
     <meta name="theme-color" content="#0f1115" />
-    <title>@ViewData["Title"] - SignalYard</title>
+    <title>@ViewData["Title"] - @instanceName</title>
 
     <!-- Apply the persisted theme before first paint to avoid a flash of the wrong theme. -->
     <script>
@@ -34,8 +44,8 @@
     <div class="page">
         <header class="top-bar">
             <a asp-controller="Dashboard" asp-action="Index" class="brand">
-                <img src="~/signalyard-icon.svg" alt="SignalYard" class="brand-icon" />
-                <span class="brand-name">SignalYard</span>
+                <img src="~/signalyard-icon.svg" alt="@instanceName" class="brand-icon" />
+                <span class="brand-name">@instanceName</span>
             </a>
             <nav class="nav-links">
                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">

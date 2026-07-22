@@ -10,10 +10,12 @@ namespace SignalYard.Web.Controllers;
 public class ApplicationsController : Controller
 {
     private readonly ApplicationStorageService _applicationService;
+    private readonly LogStorageService _logService;
 
-    public ApplicationsController(ApplicationStorageService applicationService)
+    public ApplicationsController(ApplicationStorageService applicationService, LogStorageService logService)
     {
         _applicationService = applicationService;
+        _logService = logService;
     }
 
     public async Task<IActionResult> Index()
@@ -132,8 +134,12 @@ public class ApplicationsController : Controller
 
         try
         {
+            // Delete the logs first so a successful delete never leaves orphaned log data behind.
+            // If the app record were removed first and log deletion then failed, the logs would be
+            // stranded (no app to retry against) and would resurface if the name were reused.
+            await _logService.DeleteAllLogsForApplicationAsync(name);
             await _applicationService.DeleteApplicationAsync(name);
-            TempData["SuccessMessage"] = $"Application '{name}' deleted.";
+            TempData["SuccessMessage"] = $"Application '{name}' and all its logs were deleted.";
         }
         catch (Exception ex)
         {

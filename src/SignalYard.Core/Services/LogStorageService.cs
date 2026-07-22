@@ -385,6 +385,23 @@ public partial class LogStorageService
     }
 
     /// <summary>
+    /// Deletes every stored log for an application across all of its monthly partitions.
+    /// Used when an application is deleted so its logs cannot resurface if an application
+    /// with the same name is later recreated.
+    /// </summary>
+    public async Task DeleteAllLogsForApplicationAsync(
+        string applicationName,
+        CancellationToken cancellationToken = default)
+    {
+        var partitionKeys = await GetPartitionKeysForApplicationAsync(applicationName, cancellationToken);
+
+        foreach (var partitionKey in partitionKeys)
+        {
+            await DeletePartitionAsync(partitionKey, cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// Ensures the Logs table exists
     /// </summary>
     public async Task EnsureTableExistsAsync(CancellationToken cancellationToken = default)

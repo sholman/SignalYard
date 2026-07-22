@@ -169,7 +169,7 @@ Log.CloseAndFlush(); // flush buffered events on shutdown
 ```
 
 The sink formats events as CLEF, batches them, and posts to `/api/events/raw` with the
-`X-Api-Key` header for you. See [Serilog.Sinks.SignalYard](https://github.com/simonholman/Serilog.Sinks.SignalYard)
+`X-Api-Key` header for you. See [Serilog.Sinks.SignalYard](https://github.com/SHolman/Serilog.Sinks.SignalYard)
 for configuration options (batch size, flush period, minimum level).
 
 ### 3. Query Logs
@@ -248,6 +248,7 @@ claude mcp add --transport http signalyard https://your-signalyard.azurewebsites
 
 | Setting | Description | Default |
 |---------|-------------|---------|
+| `InstanceName` | Overrides the "SignalYard" label in the browser tab title and header, to tell instances apart | `SignalYard` |
 | `ConnectionStrings:TableStorage` | Azure Storage connection string | - |
 | `TableStorage:AccountName` | Storage account name (for managed identity) | - |
 | `Mcp:ApiKey` | Global key for the `/mcp` investigation endpoint (unset = disabled) | - |
