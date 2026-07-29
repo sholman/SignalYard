@@ -29,6 +29,13 @@ public class LogQueryRequest
     /// Maximum number of results (default 1000)
     /// </summary>
     public int MaxResults { get; set; } = 1000;
+
+    /// <summary>
+    /// Optional paging cursor. When set, only entries strictly older than the entry this token
+    /// identifies are returned — pass <see cref="LogQueryResponse.ContinuationToken"/> from the
+    /// previous page to fetch the next one.
+    /// </summary>
+    public string? ContinuationToken { get; set; }
 }
 
 /// <summary>
@@ -66,4 +73,11 @@ public class LogQueryResponse
     /// Whether results were truncated due to max results limit
     /// </summary>
     public bool IsTruncated { get; set; }
+
+    /// <summary>
+    /// Cursor identifying the last entry on this page. Pass it back as
+    /// <see cref="LogQueryRequest.ContinuationToken"/> to fetch the next page.
+    /// Null when there is nothing more to fetch.
+    /// </summary>
+    public string? ContinuationToken { get; set; }
 }

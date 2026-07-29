@@ -76,7 +76,7 @@
                             <input type="text" placeholder="Filter results..." id="filterText" value="@Model.SearchText" />
                             <button type="button" class="btn-clear-search" id="clearFilterBtn" onclick="clearFilter()" title="Clear filter">×</button>
                         </div>
-                        <span class="result-count" id="resultCount">@Model.Logs.Count of @Model.Logs.Count results</span>
+                        <span class="result-count" id="resultCount">@Model.Logs.Count loaded</span>
                     </div>
                 </div>
             }
@@ -100,77 +100,31 @@
     else if (Model.Logs.Count > 0)
     {
         <div class="log-list" id="logList">
-            @foreach (var log in Model.Logs)
+            @await Html.PartialAsync("_LogEntries", new LogEntriesViewModel
             {
-                <div class="log-entry @GetLevelClass(log.Level)" data-log-id="@log.Id">
-                    <div class="log-summary" onclick="toggleLog('@log.Id')">
-                        <span class="log-timestamp" data-utc="@log.Timestamp.UtcDateTime.ToString("o")">@log.Timestamp.UtcDateTime.ToString("dd MMM yyyy hh:mm tt")</span>
-                        <span class="log-level badge @GetBadgeClass(log.Level)">@GetLevelAbbrev(log.Level)</span>
-                        <span class="log-message-line">@log.Message</span>
-                        @if (string.IsNullOrEmpty(Model.SelectedApplication))
-                        {
-                            <span class="log-app-name">@log.Application</span>
-                        }
-                    </div>
-                    
-                    <div class="log-details" id="details-@log.Id" style="display: none;">
-                        @if (!string.IsNullOrEmpty(log.MessageTemplate))
-                        {
-                            <div class="detail-section">
-                                <label>Message Template</label>
-                                <div class="template-box">
-                                    <button class="btn-search-inline" 
-                                            title="Filter logs with this template"
-                                            onclick="filterByTemplate('@System.Web.HttpUtility.JavaScriptStringEncode(log.MessageTemplate)')" 
-                                            type="button">
-                                        ↗
-                                    </button>
-                                    <span class="template-text mono">@log.MessageTemplate</span>
-                                </div>
-                            </div>
-                        }
-                        
-                        @if (log.Properties != null && log.Properties.Count > 0)
-                        {
-                            <div class="detail-section">
-                                <label>Properties</label>
-                                <div class="properties-list">
-                                    @foreach (var prop in log.Properties)
-                                    {
-                                        var rawValue = GetRawPropertyValue(prop.Value);
-                                        <div class="property-row">
-                                            <button class="btn-search-property" 
-                                                    title="Filter by @prop.Key"
-                                                    onclick="filterByProperty('@System.Web.HttpUtility.JavaScriptStringEncode(prop.Key)', '@System.Web.HttpUtility.JavaScriptStringEncode(rawValue)')"
-                                                    type="button">
-                                                ↗
-                                            </button>
-                                            <span class="property-key">@prop.Key</span>
-                                            <span class="property-value">@FormatPropertyValue(prop.Value)</span>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                        
-                        @if (!string.IsNullOrEmpty(log.Exception))
-                        {
-                            <div class="detail-section exception">
-                                <label>Exception</label>
-                                <pre class="mono">@log.Exception</pre>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
+                Logs = Model.Logs,
+                ShowApplicationName = string.IsNullOrEmpty(Model.SelectedApplication),
+                HasMore = Model.HasMore,
+                NextCursor = Model.NextCursor
+            })
         </div>
-        
-        @if (Model.IsTruncated)
-        {
-            <div class="alert alert-warning">
-                Results were truncated. Narrow your date range or filters to see all matching logs.
-            </div>
-        }
+
+        @*
+            Scroll sentinel: the viewer fetches the next page when this comes into view.
+
+            The filters travel as data attributes and are assembled into the query string in script,
+            rather than being handed to Url.Action — the app lowercases generated query strings, which
+            would fold the case of an application name and send the next page at the wrong partition.
+        *@
+        <div class="log-list-footer" id="logListFooter"
+             data-load-more-url="@Url.Action("LoadMore", "Home")"
+             data-application="@Model.SelectedApplication"
+             data-level="@Model.SelectedLevel"
+             data-time-range="@Model.SelectedTimeRange"
+             data-custom-from="@(Model.CustomFromDate?.ToString("yyyy-MM-ddTHH:mm:ss"))"
+             data-custom-to="@(Model.CustomToDate?.ToString("yyyy-MM-ddTHH:mm:ss"))">
+            <span class="log-list-status" id="logListStatus"></span>
+        </div>
     }
     else if (!Model.HasSearched)
     {
@@ -181,80 +135,40 @@
     }
 </div>
 
-@functions {
-    static string GetLevelAbbrev(string level) => level switch
-    {
-        "Verbose" => "VRB",
-        "Debug" => "DBG",
-        "Information" => "INF",
-        "Warning" => "WRN",
-        "Error" => "ERR",
-        "Fatal" => "FTL",
-        _ => level.Length >= 3 ? level[..3].ToUpper() : level.ToUpper()
-    };
-
-    static string GetBadgeClass(string level) => level switch
-    {
-        "Verbose" => "badge-vrb",
-        "Debug" => "badge-dbg",
-        "Information" => "badge-inf",
-        "Warning" => "badge-wrn",
-        "Error" => "badge-err",
-        "Fatal" => "badge-ftl",
-        _ => "badge-inf"
-    };
-
-    static string GetLevelClass(string level) => level switch
-    {
-        "Error" or "Fatal" => "level-error",
-        "Warning" => "level-warning",
-        _ => ""
-    };
-
-    static string FormatPropertyValue(object value)
-    {
-        if (value == null) return "null";
-        if (value is System.Text.Json.JsonElement jsonElement)
-        {
-            return jsonElement.ValueKind switch
-            {
-                System.Text.Json.JsonValueKind.String => $"\"{jsonElement.GetString()}\"",
-                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
-                System.Text.Json.JsonValueKind.True => "true",
-                System.Text.Json.JsonValueKind.False => "false",
-                System.Text.Json.JsonValueKind.Null => "null",
-                _ => jsonElement.GetRawText()
-            };
-        }
-        if (value is string s) return $"\"{s}\"";
-        return value.ToString() ?? "null";
-    }
-
-    static string GetRawPropertyValue(object value)
-    {
-        if (value == null) return "";
-        if (value is System.Text.Json.JsonElement jsonElement)
-        {
-            return jsonElement.ValueKind switch
-            {
-                System.Text.Json.JsonValueKind.String => jsonElement.GetString() ?? "",
-                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
-                System.Text.Json.JsonValueKind.True => "true",
-                System.Text.Json.JsonValueKind.False => "false",
-                System.Text.Json.JsonValueKind.Null => "",
-                _ => jsonElement.GetRawText()
-            };
-        }
-        if (value is string s) return s;
-        return value.ToString() ?? "";
-    }
-}
 
 @section Scripts {
 <script>
     let expandedLogId = null;
-    const logs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Logs, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
-    
+
+    // Loaded log data, in the same order as the .log-entry elements — the client-side filter pairs
+    // them up by index. Each page appends to both, so the pairing holds as more pages arrive.
+    const logs = [];
+    let nextCursor = null;
+    let hasMore = false;
+    let pagesLoaded = 0;
+
+    // Each rendered page carries its rows plus its own cursor in a JSON block (see _LogEntries).
+    // Pull that out, fold the rows into `logs`, and drop the block so it isn't left in the list.
+    function consumePageData(root) {
+        const el = root.querySelector('.log-page-data');
+        if (!el) return;
+        let page;
+        try {
+            page = JSON.parse(el.textContent);
+        } catch {
+            hasMore = false;
+            return;
+        } finally {
+            el.remove();
+        }
+        (page.logs || []).forEach(l => logs.push(l));
+        nextCursor = page.nextCursor || null;
+        hasMore = !!page.hasMore && !!nextCursor;
+        pagesLoaded++;
+    }
+
+    consumePageData(document);
+
     // Convert UTC timestamps to local time on page load
     const monthAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -277,13 +191,17 @@
         return `${weekdayNames[date.getDay()]}, ${label}`;
     }
 
-    // Show local time only on each row and insert a sticky date header whenever
-    // the day changes. Logs arrive newest-first, so a single walk groups them.
+    // Show local time only on each row and insert a sticky date header whenever the day changes.
+    // Logs arrive newest-first, so a single walk groups them. Later pages continue that walk —
+    // lastDateKey persists, so a day spanning a page boundary doesn't get a second header — and
+    // entries are marked once handled so re-running only ever touches newly appended rows.
+    let lastDateKey = null;
+
     function renderTimesAndDateGroups() {
         const logList = document.getElementById('logList');
         if (!logList) return;
-        let lastDateKey = null;
-        document.querySelectorAll('.log-entry').forEach(entry => {
+        logList.querySelectorAll('.log-entry:not([data-time-rendered])').forEach(entry => {
+            entry.setAttribute('data-time-rendered', '');
             const el = entry.querySelector('.log-timestamp[data-utc]');
             if (!el) return;
             const date = new Date(el.getAttribute('data-utc'));
@@ -489,13 +407,22 @@
             if (matches) visibleCount++;
         });
         
-        const countEl = document.getElementById('resultCount');
-        if (countEl) {
-            countEl.textContent = visibleCount + ' of ' + logs.length + ' results';
-        }
-
+        updateResultCount(visibleCount);
         updateDateHeaders();
     }
+
+    // Counts describe what has been loaded so far, not the whole time range — more pages may still
+    // be waiting below the fold, so "results" would overstate it while there are.
+    function updateResultCount(visibleCount) {
+        const countEl = document.getElementById('resultCount');
+        if (!countEl) return;
+        const suffix = hasMore ? ' loaded so far' : ' results';
+        countEl.textContent = visibleCount === logs.length
+            ? logs.length + suffix
+            : visibleCount + ' of ' + logs.length + suffix;
+    }
+
+    updateResultCount(logs.length);
     
     function clearFilter() {
         if (filterInput) {
@@ -532,12 +459,134 @@
         }
     }
 
+    // Infinite scroll. The server renders the first page only; the rest are fetched as the sentinel
+    // below the list nears the viewport, which keeps the first render cheap on busy time ranges.
+    (function () {
+        const footer = document.getElementById('logListFooter');
+        const logList = document.getElementById('logList');
+        if (!footer || !logList) return;
+
+        const status = document.getElementById('logListStatus');
+        const baseUrl = footer.getAttribute('data-load-more-url');
+
+        // The active filters, carried alongside the cursor so each page covers the same query.
+        const filters = {
+            application: footer.getAttribute('data-application'),
+            level: footer.getAttribute('data-level'),
+            timeRange: footer.getAttribute('data-time-range'),
+            customFrom: footer.getAttribute('data-custom-from'),
+            customTo: footer.getAttribute('data-custom-to')
+        };
+
+        function pageUrl(cursor) {
+            const params = new URLSearchParams();
+            Object.keys(filters).forEach(key => {
+                if (filters[key]) params.set(key, filters[key]);
+            });
+            params.set('cursor', cursor);
+            return baseUrl + '?' + params.toString();
+        }
+
+        // How many pages may load back-to-back without the user scrolling. A filter that hides every
+        // new row leaves the sentinel on screen, so loading would otherwise chain indefinitely; this
+        // caps the burst and hands control back with a "load more" prompt.
+        const MAX_AUTO_LOADS = 20;
+
+        let loading = false;
+        let autoLoads = 0;
+
+        function setStatus(text, state) {
+            footer.className = 'log-list-footer' + (state ? ' is-' + state : '');
+            status.textContent = text;
+        }
+
+        function nearViewport() {
+            return footer.getBoundingClientRect().top < window.innerHeight + 600;
+        }
+
+        async function loadNextPage() {
+            if (loading || !hasMore || !nextCursor) return;
+            loading = true;
+            setStatus('Loading more logs…', 'loading');
+
+            try {
+                const response = await fetch(pageUrl(nextCursor), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                const template = document.createElement('template');
+                template.innerHTML = await response.text();
+
+                // A signed-out session answers a redirect to the login page with 200 OK, so check we
+                // were actually given a page of logs before putting anything in the list.
+                if (!template.content.querySelector('.log-page-data')) {
+                    throw new Error('Unexpected response');
+                }
+
+                consumePageData(template.content);
+                logList.append(...template.content.children);
+
+                renderTimesAndDateGroups();
+                if (filterInput && filterInput.value) {
+                    filterLogs(filterInput.value);
+                } else {
+                    updateResultCount(logs.length);
+                }
+
+                setStatus(hasMore ? '' : logs.length + ' logs loaded — end of results.',
+                    hasMore ? null : 'done');
+            } catch {
+                setStatus('Could not load more logs. Click to retry.', 'error');
+                loading = false;
+                return;
+            }
+
+            loading = false;
+
+            // The list may still fall short of the viewport — a tall screen, or a filter hiding
+            // everything that just arrived — in which case scrolling can't trigger the next page.
+            if (hasMore && nearViewport() && ++autoLoads < MAX_AUTO_LOADS) {
+                loadNextPage();
+            } else if (hasMore && autoLoads >= MAX_AUTO_LOADS) {
+                setStatus('Load more logs', 'more');
+            }
+        }
+
+        footer.addEventListener('click', function () {
+            if (!loading && hasMore) {
+                autoLoads = 0;
+                loadNextPage();
+            }
+        });
+
+        window.addEventListener('scroll', function () {
+            autoLoads = 0;
+        }, { passive: true });
+
+        if (!hasMore) {
+            footer.style.display = 'none';
+            return;
+        }
+
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver(function (entries) {
+                if (entries.some(e => e.isIntersecting)) loadNextPage();
+            }, { rootMargin: '600px 0px' }).observe(footer);
+        } else {
+            window.addEventListener('scroll', function () {
+                if (nearViewport()) loadNextPage();
+            }, { passive: true });
+        }
+    })();
+
     // Pause the auto-refresh countdown while the user is mid-interaction — typing or
-    // reading a client-side filter, or reading an expanded entry — so a reload doesn't
-    // wipe their state out from under them. The countdown resumes once they're idle.
+    // reading a client-side filter, reading an expanded entry, or having scrolled far enough
+    // to pull in further pages — so a reload doesn't wipe their state out from under them.
+    // The countdown resumes once they're idle.
     window.signalYardShouldPauseRefresh = function () {
         const filtering = filterInput && (filterInput.value || document.activeElement === filterInput);
-        return !!(filtering || expandedLogId);
+        return !!(filtering || expandedLogId || pagesLoaded > 1);
     };
 </script>
 

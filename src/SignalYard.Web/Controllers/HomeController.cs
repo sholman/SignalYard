@@ -12,6 +12,12 @@ public class HomeController : Controller
     private readonly ApplicationStorageService _applicationService;
     private readonly LogStorageService _logService;
 
+    /// <summary>
+    /// Log entries fetched per page. The viewer loads one page up front and pulls the next as the
+    /// user scrolls, so a busy time range doesn't cost a huge first render.
+    /// </summary>
+    private const int PageSize = 500;
+
     public HomeController(ApplicationStorageService applicationService, LogStorageService logService)
     {
         _applicationService = applicationService;
@@ -49,7 +55,7 @@ public class HomeController : Controller
                 From = from,
                 To = to,
                 Level = string.IsNullOrEmpty(level) ? null : level,
-                MaxResults = 1000
+                MaxResults = PageSize
             };
 
             var allAppNames = string.IsNullOrEmpty(application)
@@ -58,7 +64,8 @@ public class HomeController : Controller
 
             var response = await _logService.QueryLogsAsync(request, allAppNames);
             viewModel.Logs = response.Logs;
-            viewModel.IsTruncated = response.IsTruncated;
+            viewModel.HasMore = response.IsTruncated;
+            viewModel.NextCursor = response.ContinuationToken;
         }
         catch (Exception ex)
         {
@@ -66,6 +73,60 @@ public class HomeController : Controller
         }
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// Returns the next page of log entries as an HTML fragment for the viewer's infinite scroll.
+    /// The fragment carries its own cursor and log JSON (see the _LogEntries partial), so the client
+    /// needs a single request per page and the entry markup is never duplicated in script.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> LoadMore(
+        [FromQuery] string? application = null,
+        [FromQuery] string? level = null,
+        [FromQuery] string timeRange = "24h",
+        [FromQuery] DateTime? customFrom = null,
+        [FromQuery] DateTime? customTo = null,
+        [FromQuery] string? cursor = null)
+    {
+        if (string.IsNullOrEmpty(cursor))
+        {
+            return BadRequest("A cursor is required.");
+        }
+
+        var (from, to) = GetDateRange(timeRange, customFrom, customTo);
+
+        var request = new LogQueryRequest
+        {
+            Application = string.IsNullOrEmpty(application) ? null : application,
+            From = from,
+            To = to,
+            Level = string.IsNullOrEmpty(level) ? null : level,
+            MaxResults = PageSize,
+            ContinuationToken = cursor
+        };
+
+        var allAppNames = string.IsNullOrEmpty(application)
+            ? (await _applicationService.GetAllApplicationsAsync()).Select(a => a.Name)
+            : null;
+
+        LogQueryResponse response;
+        try
+        {
+            response = await _logService.QueryLogsAsync(request, allAppNames);
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest("Invalid cursor.");
+        }
+
+        return PartialView("_LogEntries", new LogEntriesViewModel
+        {
+            Logs = response.Logs,
+            ShowApplicationName = string.IsNullOrEmpty(application),
+            HasMore = response.IsTruncated,
+            NextCursor = response.ContinuationToken
+        });
     }
 
     // Kept as a POST-Redirect-GET safety net. The search form now submits via GET

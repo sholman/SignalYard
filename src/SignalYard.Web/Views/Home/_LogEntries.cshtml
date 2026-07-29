@@ -1,0 +1,157 @@
+@model LogEntriesViewModel
+@*
+    One page of log entries. Used for the first page (inside Index.cshtml) and for every page the
+    viewer fetches as the user scrolls, so the row markup only ever exists here.
+
+    The trailing script block carries this page's cursor and the log data the client-side filter
+    needs. It travels with the fragment rather than being assembled separately in the controller,
+    which keeps a page's rows and its metadata impossible to get out of step.
+*@
+@foreach (var log in Model.Logs)
+{
+    <div class="log-entry @GetLevelClass(log.Level)" data-log-id="@log.Id">
+        <div class="log-summary" onclick="toggleLog('@log.Id')">
+            <span class="log-timestamp" data-utc="@log.Timestamp.UtcDateTime.ToString("o")">@log.Timestamp.UtcDateTime.ToString("dd MMM yyyy hh:mm tt")</span>
+            <span class="log-level badge @GetBadgeClass(log.Level)">@GetLevelAbbrev(log.Level)</span>
+            <span class="log-message-line">@log.Message</span>
+            @if (Model.ShowApplicationName)
+            {
+                <span class="log-app-name">@log.Application</span>
+            }
+        </div>
+
+        <div class="log-details" id="details-@log.Id" style="display: none;">
+            @if (!string.IsNullOrEmpty(log.MessageTemplate))
+            {
+                <div class="detail-section">
+                    <label>Message Template</label>
+                    <div class="template-box">
+                        <button class="btn-search-inline"
+                                title="Filter logs with this template"
+                                onclick="filterByTemplate('@System.Web.HttpUtility.JavaScriptStringEncode(log.MessageTemplate)')"
+                                type="button">
+                            ↗
+                        </button>
+                        <span class="template-text mono">@log.MessageTemplate</span>
+                    </div>
+                </div>
+            }
+
+            @if (log.Properties != null && log.Properties.Count > 0)
+            {
+                <div class="detail-section">
+                    <label>Properties</label>
+                    <div class="properties-list">
+                        @foreach (var prop in log.Properties)
+                        {
+                            var rawValue = GetRawPropertyValue(prop.Value);
+                            <div class="property-row">
+                                <button class="btn-search-property"
+                                        title="Filter by @prop.Key"
+                                        onclick="filterByProperty('@System.Web.HttpUtility.JavaScriptStringEncode(prop.Key)', '@System.Web.HttpUtility.JavaScriptStringEncode(rawValue)')"
+                                        type="button">
+                                    ↗
+                                </button>
+                                <span class="property-key">@prop.Key</span>
+                                <span class="property-value">@FormatPropertyValue(prop.Value)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(log.Exception))
+            {
+                <div class="detail-section exception">
+                    <label>Exception</label>
+                    <pre class="mono">@log.Exception</pre>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<script type="application/json" class="log-page-data">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        new
+        {
+            logs = Model.Logs,
+            hasMore = Model.HasMore,
+            nextCursor = Model.NextCursor
+        },
+        new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            // The payload sits inside a <script> block, so escape anything that could close it early.
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default
+        }))
+</script>
+
+@functions {
+    static string GetLevelAbbrev(string level) => level switch
+    {
+        "Verbose" => "VRB",
+        "Debug" => "DBG",
+        "Information" => "INF",
+        "Warning" => "WRN",
+        "Error" => "ERR",
+        "Fatal" => "FTL",
+        _ => level.Length >= 3 ? level[..3].ToUpper() : level.ToUpper()
+    };
+
+    static string GetBadgeClass(string level) => level switch
+    {
+        "Verbose" => "badge-vrb",
+        "Debug" => "badge-dbg",
+        "Information" => "badge-inf",
+        "Warning" => "badge-wrn",
+        "Error" => "badge-err",
+        "Fatal" => "badge-ftl",
+        _ => "badge-inf"
+    };
+
+    static string GetLevelClass(string level) => level switch
+    {
+        "Error" or "Fatal" => "level-error",
+        "Warning" => "level-warning",
+        _ => ""
+    };
+
+    static string FormatPropertyValue(object value)
+    {
+        if (value == null) return "null";
+        if (value is System.Text.Json.JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => $"\"{jsonElement.GetString()}\"",
+                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => "null",
+                _ => jsonElement.GetRawText()
+            };
+        }
+        if (value is string s) return $"\"{s}\"";
+        return value.ToString() ?? "null";
+    }
+
+    static string GetRawPropertyValue(object value)
+    {
+        if (value == null) return "";
+        if (value is System.Text.Json.JsonElement jsonElement)
+        {
+            return jsonElement.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.String => jsonElement.GetString() ?? "",
+                System.Text.Json.JsonValueKind.Number => jsonElement.GetRawText(),
+                System.Text.Json.JsonValueKind.True => "true",
+                System.Text.Json.JsonValueKind.False => "false",
+                System.Text.Json.JsonValueKind.Null => "",
+                _ => jsonElement.GetRawText()
+            };
+        }
+        if (value is string s) return s;
+        return value.ToString() ?? "";
+    }
+}

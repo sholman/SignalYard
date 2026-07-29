@@ -14,8 +14,26 @@ public class LogViewerViewModel
     public DateTime? CustomToDate { get; set; }
     public string? SearchText { get; set; }
     public bool HasSearched { get; set; }
-    public bool IsTruncated { get; set; }
+    public bool HasMore { get; set; }
+    public string? NextCursor { get; set; }
     public string? ErrorMessage { get; set; }
+}
+
+/// <summary>
+/// One page of log entries. Rendered by the _LogEntries partial for both the initial page load and
+/// the infinite-scroll fetches, so the entry markup lives in exactly one place.
+/// </summary>
+public class LogEntriesViewModel
+{
+    public List<LogQueryResult> Logs { get; set; } = [];
+
+    /// <summary>
+    /// Whether to show the originating application on each row (hidden when filtered to one app).
+    /// </summary>
+    public bool ShowApplicationName { get; set; }
+
+    public bool HasMore { get; set; }
+    public string? NextCursor { get; set; }
 }
 
 public class LogSearchFormModel

@@ -101,7 +101,9 @@ public class LogInvestigationToolsTests
         await LogInvestigationTools.QueryLogs(
             logStore, appStore, application: "App1", from: RangeFrom, to: RangeTo, maxResults: 5000);
 
-        capturedMaxPerPage.Should().Be(1000);
+        // One more than the clamped 1000 is fetched: the extra row is the storage layer's probe for
+        // whether a further page exists, and is never returned to the caller.
+        capturedMaxPerPage.Should().Be(1001);
     }
 
     [Fact]

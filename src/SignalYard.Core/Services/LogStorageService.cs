@@ -22,6 +22,13 @@ public partial class LogStorageService
     [GeneratedRegex(@"\{(@?\w+)(?::[^}]*)?\}")]
     private static partial Regex MessageTemplateRegex();
 
+    /// <summary>
+    /// Shape of a row key ("{invertedTicks:D19}_{guid:N}"). Paging cursors are row keys handed back
+    /// to the caller, so they are validated against this before being interpolated into a filter.
+    /// </summary>
+    [GeneratedRegex(@"^\d{19}_[0-9a-fA-F]{32}$")]
+    private static partial Regex RowKeyRegex();
+
     public LogStorageService(TableServiceClient tableServiceClient)
     {
         _logsTable = tableServiceClient.GetTableClient("Logs");
@@ -199,6 +206,22 @@ public partial class LogStorageService
     {
         var response = new LogQueryResponse();
 
+        // Paging: row keys are inverted UTC ticks, so they sort newest-first across every partition.
+        // Resuming after the previous page's last row key therefore skips exactly what was already
+        // returned — no offset counting, and no duplicates or gaps if logs arrive between pages.
+        // Validated up front: a malformed cursor is a bad request whatever else the query asks for,
+        // and it is about to be interpolated into a filter.
+        var cursorFilter = string.Empty;
+        if (!string.IsNullOrEmpty(request.ContinuationToken))
+        {
+            if (!RowKeyRegex().IsMatch(request.ContinuationToken))
+            {
+                throw new ArgumentException("Invalid continuation token.", nameof(request));
+            }
+
+            cursorFilter = $" and RowKey gt '{request.ContinuationToken}'";
+        }
+
         // Determine which applications to query
         var applicationsToQuery = string.IsNullOrEmpty(request.Application)
             ? allApplicationNames?.ToList() ?? []
@@ -223,6 +246,10 @@ public partial class LogStorageService
             ? string.Empty
             : $" and Level eq '{request.Level}'";
 
+        // Fetch one more than asked for so "is there another page?" is answered exactly, rather than
+        // inferred from having filled the page.
+        var fetchLimit = request.MaxResults + 1;
+
         // Query partitions concurrently (bounded), so multi-application/multi-month queries are not
         // serialized behind each other.
         using var throttler = new SemaphoreSlim(MaxParallelPartitionQueries);
@@ -232,7 +259,7 @@ public partial class LogStorageService
             try
             {
                 return await QueryPartitionAsync(
-                    partitionKey, lowerBound, upperBound, levelFilter, request.MaxResults, cancellationToken);
+                    partitionKey, lowerBound, upperBound, levelFilter, cursorFilter, fetchLimit, cancellationToken);
             }
             finally
             {
@@ -242,51 +269,54 @@ public partial class LogStorageService
 
         var partitionResults = await Task.WhenAll(partitionTasks);
 
-        // Merge results from all partitions, newest first, and apply the overall limit.
+        // Merge results from all partitions and apply the overall limit. Ordering by row key (rather
+        // than by timestamp) keeps the sequence total and stable across pages: same-instant entries
+        // always fall on the same side of a cursor. Ordinal comparison matches how the table service
+        // ordered and range-filtered the keys.
         var merged = partitionResults
-            .SelectMany(r => r.Results)
-            .OrderByDescending(r => r.Timestamp)
+            .SelectMany(r => r)
+            .OrderBy(r => r.Id, StringComparer.Ordinal)
             .ToList();
 
-        response.IsTruncated = partitionResults.Any(r => r.HitLimit) || merged.Count > request.MaxResults;
+        response.IsTruncated = merged.Count > request.MaxResults;
         response.Logs = merged.Take(request.MaxResults).ToList();
         response.TotalCount = response.Logs.Count;
+        response.ContinuationToken = response.IsTruncated ? response.Logs[^1].Id : null;
         return response;
     }
 
     /// <summary>
-    /// Queries a single partition for up to <paramref name="maxResults"/> in-range entries (newest first).
-    /// The row-key range already scopes the results to the requested time window, so no in-memory
-    /// timestamp filtering is needed.
+    /// Queries a single partition for up to <paramref name="limit"/> in-range entries (newest first).
+    /// The row-key range already scopes the results to the requested time window — and, when paging,
+    /// to the part of it not yet returned — so no in-memory filtering is needed.
     /// </summary>
-    private async Task<(List<LogQueryResult> Results, bool HitLimit)> QueryPartitionAsync(
+    private async Task<List<LogQueryResult>> QueryPartitionAsync(
         string partitionKey,
         string lowerBound,
         string upperBound,
         string levelFilter,
-        int maxResults,
+        string cursorFilter,
+        int limit,
         CancellationToken cancellationToken)
     {
-        var filter = $"PartitionKey eq '{partitionKey}' and RowKey ge '{lowerBound}' and RowKey le '{upperBound}'{levelFilter}";
+        var filter = $"PartitionKey eq '{partitionKey}' and RowKey ge '{lowerBound}' and RowKey le '{upperBound}'{levelFilter}{cursorFilter}";
 
         var results = new List<LogQueryResult>();
-        var hitLimit = false;
 
         await foreach (var entity in _logsTable.QueryAsync<LogEntry>(
             filter: filter,
-            maxPerPage: maxResults,
+            maxPerPage: limit,
             cancellationToken: cancellationToken))
         {
             results.Add(ConvertToQueryResult(entity));
 
-            if (results.Count >= maxResults)
+            if (results.Count >= limit)
             {
-                hitLimit = true;
                 break;
             }
         }
 
-        return (results, hitLimit);
+        return results;
     }
 
     private static List<string> GetPartitionKeysForDateRange(string applicationName, DateTimeOffset from, DateTimeOffset to)

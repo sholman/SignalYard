@@ -74,6 +74,7 @@
                             <div class="action-buttons">
                                 <button class="btn btn-secondary btn-sm" onclick="showEditDialog('@app.Name', '@System.Web.HttpUtility.JavaScriptStringEncode(app.Description ?? "")', @app.RetentionDays, @(app.Enabled ? "true" : "false"))">Edit</button>
                                 <button class="btn btn-secondary btn-sm" onclick="showRegenerateDialog('@app.Name')">Regenerate Key</button>
+                                <button class="btn btn-secondary btn-sm" onclick="showClearLogsDialog('@app.Name')">Clear Data</button>
                                 <button class="btn btn-danger btn-sm" onclick="showDeleteDialog('@app.Name')">Delete</button>
                             </div>
                         </td>
@@ -181,6 +182,42 @@
     </div>
 </div>
 
+<!-- Clear Data Confirmation Dialog -->
+<div class="modal-backdrop" id="clearLogsModal" style="display: none;" onclick="closeDialogs()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 class="modal-title">Clear All Data</h2>
+            <button class="modal-close" id="clearLogsModalClose" onclick="closeDialogs()">×</button>
+        </div>
+        <div class="modal-body">
+            <!-- Confirmation state -->
+            <div id="clearLogsConfirmState">
+                <div class="alert alert-error">
+                    Are you sure you want to clear all data for <strong id="clearLogsAppName"></strong>?
+                    This will <strong>permanently delete all logs</strong> stored for this application. The application and its API key will remain in place. This action cannot be undone.
+                </div>
+
+                <form method="post" asp-action="ClearLogs" id="clearLogsForm" onsubmit="return onClearLogsSubmit()">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="name" id="clearLogsNameInput" />
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" onclick="closeDialogs()">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Clear All Data</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Clearing state -->
+            <div id="clearLogsProgressState" style="display: none;">
+                <div class="loading">
+                    <span class="spinner"></span>
+                    <span>Clearing all logs for <strong id="clearLogsProgressName"></strong>&hellip; This may take a while for applications with a large log history.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Confirmation Dialog -->
 <div class="modal-backdrop" id="deleteModal" style="display: none;" onclick="closeDialogs()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -221,7 +258,7 @@
 <script>
     let isEditing = false;
     let editingName = null;
-    let isDeleting = false;
+    let isBusy = false; // true while a delete/clear-data request is in flight
 
     function showCreateDialog() {
         isEditing = false;
@@ -272,7 +309,7 @@
     function onDeleteSubmit() {
         // Switch the modal to a busy state; the form still submits normally and the
         // page reloads when the server finishes deleting the logs and application.
-        isDeleting = true;
+        isBusy = true;
         document.getElementById('deleteProgressName').textContent =
             document.getElementById('deleteNameInput').value;
         document.getElementById('deleteConfirmState').style.display = 'none';
@@ -281,11 +318,33 @@
         return true;
     }
 
+    function showClearLogsDialog(name) {
+        // Reset to the confirmation state in case a previous attempt left it busy.
+        document.getElementById('clearLogsConfirmState').style.display = 'block';
+        document.getElementById('clearLogsProgressState').style.display = 'none';
+        document.getElementById('clearLogsModalClose').style.display = '';
+        document.getElementById('clearLogsAppName').textContent = name;
+        document.getElementById('clearLogsNameInput').value = name;
+        document.getElementById('clearLogsModal').style.display = 'flex';
+    }
+
+    function onClearLogsSubmit() {
+        // Same busy-state pattern as delete: swap to the spinner and let the form submit.
+        isBusy = true;
+        document.getElementById('clearLogsProgressName').textContent =
+            document.getElementById('clearLogsNameInput').value;
+        document.getElementById('clearLogsConfirmState').style.display = 'none';
+        document.getElementById('clearLogsProgressState').style.display = 'block';
+        document.getElementById('clearLogsModalClose').style.display = 'none';
+        return true;
+    }
+
     function closeDialogs() {
-        // Don't allow the delete modal to be dismissed while a deletion is in progress.
-        if (isDeleting) return;
+        // Don't allow modals to be dismissed while a delete/clear-data request is in progress.
+        if (isBusy) return;
         document.getElementById('createEditModal').style.display = 'none';
         document.getElementById('regenerateModal').style.display = 'none';
+        document.getElementById('clearLogsModal').style.display = 'none';
         document.getElementById('deleteModal').style.display = 'none';
     }
 

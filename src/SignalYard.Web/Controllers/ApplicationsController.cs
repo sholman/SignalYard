@@ -124,6 +124,29 @@ public class ApplicationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearLogs(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            TempData["ErrorMessage"] = "Application name is required.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            await _logService.DeleteAllLogsForApplicationAsync(name);
+            TempData["SuccessMessage"] = $"All logs for '{name}' were deleted. The application and its API key are unchanged.";
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string name)
     {
         if (string.IsNullOrEmpty(name))

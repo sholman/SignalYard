@@ -1,6 +1,7 @@
 using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using SignalYard.Core.Entities;
 
 namespace SignalYard.Tests.Integration;
 
@@ -92,6 +93,30 @@ public class AuthenticatedPagesTests : IClassFixture<SignalYardTestFactory>
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         content.Should().Contain("Application");
+    }
+
+    [Fact]
+    public async Task LoadMore_WithCursor_ReturnsAPageFragment()
+    {
+        // The log viewer's infinite scroll asks for the next page with the cursor from the previous
+        // one; the fragment must carry its own page data for the client to pick up.
+        var cursor = LogEntry.CreateRowKey(DateTimeOffset.UtcNow);
+
+        var response = await _client.GetAsync($"/logs/LoadMore?cursor={cursor}");
+        var content = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        content.Should().Contain("log-page-data");
+    }
+
+    [Theory]
+    [InlineData("/logs/LoadMore")]                   // no cursor at all
+    [InlineData("/logs/LoadMore?cursor=not-a-key")]  // malformed cursor
+    public async Task LoadMore_WithoutUsableCursor_ReturnsBadRequest(string url)
+    {
+        var response = await _client.GetAsync(url);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
