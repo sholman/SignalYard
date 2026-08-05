@@ -556,6 +556,48 @@
     opacity: 1;
 }
 
+/* Trailing "copy this entry as JSON" affordance on each log row. Dimmed until the
+   row is hovered so it stays out of the way while scanning. */
+.btn-copy-json {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.1875rem;
+    border-radius: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.btn-copy-json svg {
+    display: block;
+}
+
+.log-summary:hover .btn-copy-json {
+    opacity: 0.45;
+}
+
+.btn-copy-json:hover,
+.log-summary:hover .btn-copy-json:hover {
+    color: var(--accent-blue);
+    background-color: var(--bg-surface0);
+    opacity: 1;
+}
+
+.btn-copy-json.copied {
+    color: var(--accent-green);
+    opacity: 1;
+}
+
+.btn-copy-json.copy-failed {
+    color: var(--accent-red);
+    opacity: 1;
+}
+
 /* Applications page styles */
 .applications-page {
     width: 100%;
@@ -1148,10 +1190,14 @@
 /* Touch-device refinements: hover-reveal affordances don't work without a
    pointer, and controls need a comfortable tap target. */
 @media (hover: none) and (pointer: coarse) {
-    /* Show the "filter by this" arrows permanently — there's no hover. */
+    /* Show the "filter by this" arrows and the copy-JSON button permanently — there's no hover. */
     .btn-search-inline,
     .btn-search-property {
         opacity: 1;
+    }
+
+    .log-summary .btn-copy-json {
+        opacity: 0.55;
     }
 
     /* Ensure interactive controls meet a ~44px minimum tap target. The toolbar
@@ -1169,9 +1215,10 @@
         min-width: 2.75rem;
     }
 
-    /* Keep the log-row arrows from stretching the row height. */
+    /* Keep the log-row arrows and copy button from stretching the row height. */
     .property-row .btn-search-property,
-    .template-box .btn-search-inline {
+    .template-box .btn-search-inline,
+    .log-summary .btn-copy-json {
         min-height: 2.25rem;
         min-width: 2.25rem;
     }

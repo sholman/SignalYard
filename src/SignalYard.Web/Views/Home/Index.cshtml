@@ -459,6 +459,77 @@
         }
     }
 
+    // Copy one log entry — message plus all its metadata — to the clipboard as JSON, so it can be
+    // pasted straight into a ticket, chat, or AI prompt. Fields are drawn from the same loaded data
+    // the filter uses (looked up by id, not row index, so it holds regardless of scroll position).
+    // Empty fields are dropped and the human-meaningful ones lead, keeping the pasted object tidy.
+    const COPY_JSON_FIELD_ORDER =
+        ['timestamp', 'level', 'application', 'message', 'messageTemplate', 'exception', 'eventId', 'properties', 'id'];
+
+    function buildLogJson(log) {
+        const out = {};
+        COPY_JSON_FIELD_ORDER.forEach(key => {
+            const value = log[key];
+            if (value === null || value === undefined || value === '') return;
+            if (key === 'properties' && Object.keys(value).length === 0) return;
+            out[key] = value;
+        });
+        return JSON.stringify(out, null, 2);
+    }
+
+    async function copyTextToClipboard(text) {
+        // The async Clipboard API is only available in secure contexts; SignalYard is often reached
+        // over plain HTTP on a LAN, so fall back to a hidden-textarea copy where it's unavailable.
+        if (navigator.clipboard && window.isSecureContext) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch { /* fall through */ }
+        }
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.top = '-1000px';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+        } catch {
+            return false;
+        }
+    }
+
+    const COPY_ICON_OK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+    const COPY_ICON_FAIL = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>';
+
+    function flashCopyButton(btn, ok) {
+        if (!btn || btn.dataset.flashing) return;
+        if (!btn.dataset.copyIcon) btn.dataset.copyIcon = btn.innerHTML;
+        btn.dataset.flashing = '1';
+        btn.classList.add(ok ? 'copied' : 'copy-failed');
+        btn.innerHTML = ok ? COPY_ICON_OK : COPY_ICON_FAIL;
+        setTimeout(() => {
+            btn.classList.remove('copied', 'copy-failed');
+            btn.innerHTML = btn.dataset.copyIcon;
+            delete btn.dataset.flashing;
+        }, 1200);
+    }
+
+    function copyLogJson(event, logId) {
+        event.stopPropagation(); // don't toggle the row open/closed
+        const btn = event.currentTarget;
+        const log = logs.find(l => l.id === logId);
+        if (!log) {
+            flashCopyButton(btn, false);
+            return;
+        }
+        copyTextToClipboard(buildLogJson(log)).then(ok => flashCopyButton(btn, ok));
+    }
+
     // Infinite scroll. The server renders the first page only; the rest are fetched as the sentinel
     // below the list nears the viewport, which keeps the first render cheap on busy time ranges.
     (function () {
