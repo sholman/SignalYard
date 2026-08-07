@@ -111,6 +111,12 @@
         </main>
     </div>
 
+    <button type="button" class="scroll-top" id="scrollTopBtn" aria-label="Scroll back to top" title="Back to top">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+
     <script>
         (function () {
             var btn = document.getElementById('themeToggle');
@@ -121,6 +127,25 @@
                 document.documentElement.setAttribute('data-theme', next);
                 try { localStorage.setItem('signalyard-theme', next); } catch (e) { }
             });
+        })();
+    </script>
+
+    <!-- Back-to-top button: reveals itself once the page is scrolled, then jumps back to the top. -->
+    <script>
+        (function () {
+            var btn = document.getElementById('scrollTopBtn');
+            if (!btn) return;
+            var THRESHOLD = 400;
+            function update() {
+                var y = window.pageYOffset || document.documentElement.scrollTop;
+                btn.classList.toggle('is-visible', y > THRESHOLD);
+            }
+            window.addEventListener('scroll', update, { passive: true });
+            btn.addEventListener('click', function () {
+                var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+            });
+            update();
         })();
     </script>
 
