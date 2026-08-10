@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SignalYard — Future Features</title>
+<style>
+  :root,
+  [data-theme="dark"] {
+    --bg-base: #0f1115;
+    --bg-mantle: #15181e;
+    --bg-crust: #1a1d24;
+    --bg-surface0: #282c34;
+    --bg-surface1: #3b4048;
+    --bg-surface2: #4f545c;
+    --text-primary: #e1e4e8;
+    --text-secondary: #a0a4aa;
+    --text-muted: #6b7280;
+    --accent-blue: #0EA5E9;
+    --accent-green: #34d399;
+    --accent-yellow: #fbbf24;
+    --accent-red: #ef4444;
+    --accent-peach: #fb923c;
+    --accent-mauve: #a78bfa;
+    --accent-teal: #2dd4bf;
+    --hover-overlay: rgba(255, 255, 255, 0.05);
+    --border: #2a2e37;
+    --shadow: rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+
+  [data-theme="light"] {
+    --bg-base: #ffffff;
+    --bg-mantle: #f5f6f8;
+    --bg-crust: #ffffff;
+    --bg-surface0: #eceef1;
+    --bg-surface1: #dcdfe4;
+    --bg-surface2: #c3c7ce;
+    --text-primary: #1a1d24;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+    --accent-blue: #0284c7;
+    --accent-green: #059669;
+    --accent-yellow: #d97706;
+    --accent-red: #dc2626;
+    --accent-peach: #ea580c;
+    --accent-mauve: #7c3aed;
+    --accent-teal: #0d9488;
+    --hover-overlay: rgba(0, 0, 0, 0.04);
+    --border: #e2e5ea;
+    --shadow: rgba(0, 0, 0, 0.08);
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  code, pre, .mono {
+    font-family: 'Cascadia Code', 'SF Mono', 'Fira Code', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  header.doc {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    margin: 0 0 0.5rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 0.75rem;
+    line-height: 1.2;
+  }
+
+  .meta {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+  }
+
+  .meta b { color: var(--text-primary); font-weight: 600; }
+
+  h2 {
+    font-size: 1.4rem;
+    margin: 2.75rem 0 1rem;
+    padding-top: 0.5rem;
+  }
+
+  h3 {
+    font-size: 1.08rem;
+    margin: 1.75rem 0 0.6rem;
+    color: var(--text-primary);
+  }
+
+  p { margin: 0 0 1rem; }
+
+  a { color: var(--accent-blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.4rem; }
+
+  strong { color: var(--text-primary); font-weight: 600; }
+
+  code {
+    background: var(--bg-surface0);
+    padding: 0.12em 0.4em;
+    border-radius: 4px;
+    font-size: 0.86em;
+    color: var(--accent-peach);
+  }
+
+  pre {
+    background: var(--bg-mantle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.15rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin: 0 0 1.25rem;
+  }
+  pre code { background: none; padding: 0; color: var(--text-primary); }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.7em;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+  }
+  .badge.proposed { background: color-mix(in srgb, var(--accent-yellow) 18%, transparent); color: var(--accent-yellow); }
+
+  .card {
+    background: var(--bg-crust);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.4rem;
+    margin: 0 0 1rem;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+
+  .callout {
+    border-left: 3px solid var(--accent-peach);
+    background: color-mix(in srgb, var(--accent-peach) 8%, var(--bg-mantle));
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.25rem;
+    margin: 0 0 1.5rem;
+  }
+  .callout .label {
+    font-weight: 700;
+    color: var(--accent-peach);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout.rec { border-left-color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 8%, var(--bg-mantle)); }
+  .callout.rec .label { color: var(--accent-green); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 1.5rem;
+    font-size: 0.9rem;
+  }
+  .table-scroll { overflow-x: auto; }
+  th, td {
+    text-align: left;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-mantle);
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  tbody tr:hover { background: var(--hover-overlay); }
+  td b { color: var(--text-primary); }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps > li {
+    position: relative;
+    padding-left: 2.6rem;
+    margin-bottom: 1.25rem;
+    counter-increment: step;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 0;
+    width: 1.8rem; height: 1.8rem;
+    background: var(--accent-blue);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+  }
+  .steps > li h3 { margin-top: 0.15rem; }
+
+  .pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.12em 0.55em;
+    border-radius: 5px;
+    background: var(--bg-surface0);
+    color: var(--text-secondary);
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+  .pill.small { background: color-mix(in srgb, var(--accent-green) 18%, transparent); color: var(--accent-green); }
+  .pill.big { background: color-mix(in srgb, var(--accent-red) 18%, transparent); color: var(--accent-red); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+
+  .toc {
+    background: var(--bg-mantle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.4rem;
+    margin-bottom: 2.5rem;
+  }
+  .toc h4 { margin: 0 0 0.6rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .toc ol { margin: 0; padding-left: 1.2rem; }
+  .toc li { margin-bottom: 0.25rem; }
+
+  footer.doc {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    top: 1rem; right: 1rem;
+    background: var(--bg-surface0);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { background: var(--bg-surface1); }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 1.6rem; }
+    .wrap { padding: 2rem 1rem 4rem; }
+  }
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')">◐ Theme</button>
+
+<div class="wrap">
+
+  <header class="doc">
+    <p class="eyebrow">SignalYard · Future Features</p>
+    <h1>MCP Authentication → OAuth <span class="badge proposed">Proposed</span></h1>
+    <div class="meta">
+      <span><b>Goal:</b> Per-user OAuth on the <code>/mcp</code> endpoint for Claude connector integration</span>
+      <span><b>Drafted:</b> 2026-08-10</span>
+      <span><b>Status:</b> Design / not started</span>
+    </div>
+  </header>
+
+  <p>
+    This document captures what it would take to move SignalYard's MCP endpoint from a single shared
+    API key to <strong>per-user OAuth</strong>, so it can be added as a remote connector in Claude
+    (claude.ai custom connectors and Claude Code) and each user authenticates as themselves. It is a
+    design note for future work — nothing here is implemented yet.
+  </p>
+
+  <div class="toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#today">What we have today</a></li>
+      <li><a href="#shift">The shift OAuth requires</a></li>
+      <li><a href="#constraint">The one hard constraint (DCR)</a></li>
+      <li><a href="#work">Work breakdown</a></li>
+      <li><a href="#recommendation">Recommendation</a></li>
+      <li><a href="#gotchas">Smaller gotchas</a></li>
+      <li><a href="#next">Next steps &amp; open questions</a></li>
+      <li><a href="#refs">References</a></li>
+    </ol>
+  </div>
+
+  <h2 id="today">1. What we have today</h2>
+  <p>
+    The <code>/mcp</code> endpoint is guarded by a single global secret (<code>Mcp:ApiKey</code>) sent
+    as an <code>X-Api-Key</code> or <code>Authorization: Bearer</code> header, validated in constant
+    time by <code>McpApiKeyAuthenticationHandler</code>. A successful request always produces the
+    <em>same</em> fixed identity — <code>McpInvestigator</code> — with read access to every
+    application's logs. The endpoint fails closed: no configured key means every request is rejected.
+  </p>
+  <p>
+    There is <strong>no user model</strong> behind the MCP endpoint. The tools in
+    <code>LogInvestigationTools</code> are <code>static</code> and receive no caller context, so there
+    is nothing to scope access by. Relevant code today:
+  </p>
+  <ul>
+    <li><code>src/SignalYard.Web/Auth/McpApiKeyAuthenticationHandler.cs</code> — the shared-secret handler</li>
+    <li><code>src/SignalYard.Web/Program.cs</code> (lines ~62–117) — scheme registration and the <code>/mcp</code> authorization policy</li>
+    <li><code>src/SignalYard.Web/Mcp/LogInvestigationTools.cs</code> — the three read-only tools</li>
+  </ul>
+
+  <h2 id="shift">2. The shift OAuth requires</h2>
+  <p>
+    <code>/mcp</code> becomes an OAuth 2.0 <strong>Resource Server</strong>. Instead of checking a
+    shared secret, it validates a <strong>per-user bearer JWT</strong> issued by an
+    <strong>Authorization Server (AS)</strong>. Each user runs a browser login flow that Claude
+    drives, and Claude attaches their token to every MCP call. The .NET SDK already in the project
+    (<code>ModelContextProtocol.AspNetCore</code> 1.4.0) provides the server-side plumbing for this
+    (protected-resource metadata + the <code>WWW-Authenticate</code> challenge).
+  </p>
+
+  <h2 id="constraint">3. The one hard constraint that drives the whole design</h2>
+  <div class="callout">
+    <span class="label">⚠ Critical constraint</span>
+    <p>
+      <strong>Claude's connector system requires Dynamic Client Registration (DCR).</strong> Claude
+      registers <em>itself</em> at runtime via a <code>/register</code> endpoint and does
+      <strong>not</strong> let the user paste a client ID / secret. The AS must publish
+      <code>/.well-known/oauth-authorization-server</code> including a
+      <code>registration_endpoint</code>, advertise S256 PKCE
+      (<code>"code_challenge_methods_supported": ["S256"]</code>), and rotate refresh tokens for
+      public clients.
+    </p>
+    <p>
+      <strong>Entra ID — what SignalYard already uses for the UI — does not support open DCR.</strong>
+      So we cannot simply point Claude at the existing Entra tenant. Choosing where DCR-capable tokens
+      come from is the real decision; the SignalYard code changes are small by comparison.
+    </p>
+  </div>
+
+  <h2 id="work">4. Work breakdown</h2>
+
+  <ol class="steps">
+    <li>
+      <h3>Stand up an Authorization Server that supports DCR <span class="pill big">the real work</span></h3>
+      <p>Three routes, in order of best fit for a self-hosted OSS tool:</p>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Route</th><th>What it is</th><th>Cost / trade-off</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Self-host OpenIddict</b></td>
+            <td>Free, MIT-licensed, ASP.NET Core-native AS. Supports DCR + PKCE. Runs inside or beside SignalYard. Federate the actual login to the existing Entra so users sign in with the same account.</td>
+            <td>Most code; you own a token-issuing security surface.</td>
+          </tr>
+          <tr>
+            <td><b>Managed MCP-auth provider</b></td>
+            <td>WorkOS AuthKit, Stytch, Scalekit, Auth0 — several now market MCP auth with DCR + metadata + token issuance out of the box, and can federate to Entra.</td>
+            <td>Least code; external dependency, likely paid.</td>
+          </tr>
+          <tr>
+            <td><b>DCR shim / proxy in front of Entra</b></td>
+            <td>Implement <code>/register</code> + metadata ourselves, map registrations onto one pre-registered Entra app, and proxy the token exchange.</td>
+            <td>Fiddly; effectively re-implementing part of an AS anyway.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </li>
+
+    <li>
+      <h3>Wire SignalYard as a resource server <span class="pill small">small, well-supported</span></h3>
+      <ul>
+        <li>Add <code>AddJwtBearer</code> pointing at the AS; validate issuer, <strong>audience / resource</strong> (RFC 8707 — the token must be minted <em>for</em> SignalYard, not another resource), and scopes.</li>
+        <li>Add the SDK's MCP auth handler (<code>McpAuthenticationHandler</code> / <code>.AddMcp(...)</code>) so a tokenless request returns <code>401</code> + <code>WWW-Authenticate</code> pointing at <code>/.well-known/oauth-protected-resource</code>. That discovery chain is exactly what Claude follows.</li>
+        <li>Swap the <code>/mcp</code> policy in <code>Program.cs</code> (~lines 113–117) from the <code>McpApiKey</code> scheme to the JWT/MCP scheme.</li>
+        <li>Decide the fate of <code>McpApiKeyAuthenticationHandler</code>: keep it as a second scheme for headless / CI use (dual auth), or retire it. The existing GET <code>/mcp</code> → 405 short-circuit and stateless transport stay as-is.</li>
+      </ul>
+    </li>
+
+    <li>
+      <h3>Add a per-user identity / authorization model <span class="pill">only if "their own auth" should mean "their own access"</span></h3>
+      <ul>
+        <li>Today there is no user↔application access model — any authenticated caller reads all apps. OAuth alone gives a real user principal (better audit + per-user revocation / expiry) but still global read unless we add scoping.</li>
+        <li>To scope it: introduce a user→app access entity (a new Table Storage table — none exists today), thread the <code>ClaimsPrincipal</code> into the tools (currently <code>static</code> with no caller context — inject <code>IHttpContextAccessor</code> or pass identity through), and filter <code>list_applications</code> / <code>query_logs</code> / <code>get_log_stats</code> accordingly.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2 id="recommendation">5. Recommendation</h2>
+  <div class="callout rec">
+    <span class="label">✔ Suggested approach</span>
+    <p>
+      The SignalYard-side changes are roughly a half-day; the decision that actually matters is
+      <strong>where DCR-capable tokens come from</strong>. For a self-hosted, open-source tool, default
+      to <strong>OpenIddict federated to Entra</strong> — no commercial dependency, and users sign in
+      with the Entra account they already have.
+    </p>
+    <p>
+      Treat per-user <em>authorization</em> scoping (step 3) as a separate follow-up. Ship per-user
+      <em>authentication</em> first (real identities, revocation, audit) while keeping global read,
+      then add access scoping later.
+    </p>
+  </div>
+
+  <h2 id="gotchas">6. Smaller gotchas</h2>
+  <ul>
+    <li><strong>HTTPS + public reachability</strong> for the AS metadata and <code>/register</code> endpoints.</li>
+    <li><strong>DCR isn't optional.</strong> claude.ai custom connectors strictly need DCR; Claude Code can do OAuth too, but relying only on Claude Code doesn't remove the requirement.</li>
+    <li><strong>Login federation matters.</strong> Whichever AS route we pick, wire its user authentication to the existing Entra so we don't create a second identity silo.</li>
+    <li><strong>Token audience binding</strong> (RFC 8707) must be validated — reject tokens minted for a different resource.</li>
+  </ul>
+
+  <h2 id="next">7. Next steps &amp; open questions</h2>
+  <ul>
+    <li>Confirm the AS route (OpenIddict self-host vs managed provider).</li>
+    <li>Prototype the resource-server wiring against a throwaway AS to validate the Claude discovery + DCR flow end-to-end before committing to the AS choice.</li>
+    <li>Decide whether to keep the global API key as a fallback scheme for CI / headless use.</li>
+    <li>Decide whether per-user <em>authorization</em> (app-level access scoping) is in scope now or a later phase.</li>
+    <li>Verify exact SDK API names/signatures against the installed <code>ModelContextProtocol.AspNetCore</code> version when implementation starts.</li>
+  </ul>
+
+  <h2 id="refs">8. References</h2>
+  <ul>
+    <li><a href="https://deepwiki.com/modelcontextprotocol/csharp-sdk/9.4-oauth-protected-server">OAuth-Protected Server — MCP C# SDK (DeepWiki)</a></li>
+    <li><a href="https://pabasara-mahindapala.github.io/dotnet/security/authentication/aspnetcore/2026/05/02/mcp-server-oauth2-dotnet/">MCP Server Authentication in .NET: OAuth 2.1 with PKCE</a></li>
+    <li><a href="https://www.devleader.ca/2026/07/23/securing-remote-mcp-servers-in-c-oauth-20-jwt-and-protected-resource-metadata">Securing Remote MCP Servers in C#: OAuth 2.0, JWT, PRM</a></li>
+    <li><a href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp">Get started with custom connectors using remote MCP — Claude Help Center</a></li>
+    <li><a href="https://claude.com/docs/connectors/building/authentication">Authentication for connectors — Claude Docs</a></li>
+    <li><a href="https://sunpeak.ai/blogs/claude-connector-oauth-authentication/">Claude Connector Authentication: How OAuth Works (July 2026)</a></li>
+  </ul>
+
+  <footer class="doc">
+    SignalYard future-features design note · Drafted 2026-08-10 · Status: proposed, not implemented.
+    Verify SDK API details and provider capabilities at implementation time.
+  </footer>
+
+</div>
+</body>
+</html>
