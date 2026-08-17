@@ -53,6 +53,14 @@ public class Application : ITableEntity
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// True for the built-in application that receives SignalYard's own internal logs. System apps are
+    /// created/managed by the app itself, use in-process ingestion (no API key), and are protected from
+    /// deletion and key regeneration in the UI. Table Storage is schemaless, so this column is simply
+    /// absent on rows written by older versions and deserializes to <c>false</c> — no migration needed.
+    /// </summary>
+    public bool IsSystem { get; set; }
+
+    /// <summary>
     /// Log retention period in days (default 365)
     /// </summary>
     public int RetentionDays { get; set; } = 365;

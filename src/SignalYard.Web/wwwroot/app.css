@@ -330,6 +330,9 @@ tr:hover td {
 
 .badge-enabled { background-color: var(--accent-green); color: var(--bg-base); }
 .badge-disabled { background-color: var(--bg-surface1); color: var(--text-secondary); }
+.badge-system { background-color: var(--accent-mauve); color: var(--bg-base); margin-left: 0.4rem; }
+
+.api-key-inprocess { color: var(--text-secondary); font-style: italic; }
 
 /* Modal styles */
 .modal-backdrop {

@@ -2,6 +2,7 @@ using Azure.Data.Tables;
 using SignalYard.Core.Services;
 using SignalYard.Web.Auth;
 using SignalYard.Web.Endpoints;
+using SignalYard.Web.Logging;
 using SignalYard.Web.Mcp;
 using SignalYard.Web.Services;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -49,9 +50,19 @@ builder.Services.AddSingleton<ApiKeyService>();
 builder.Services.AddSingleton<LogStorageService>();
 builder.Services.AddSingleton<ApplicationStorageService>();
 
+// Configure built-in self-logging (mirrors SignalYard's own logs into its "signalyard" application).
+// This registers the log provider + in-memory queue when enabled and returns the resolved options; the
+// flush service is registered after TableInitializationService below so the Logs table is ensured, and
+// the built-in application seeded, before the first flush runs.
+var selfLoggingOptions = builder.AddSignalYardSelfLogging();
+
 // Register hosted services
 builder.Services.AddHostedService<TableInitializationService>();
 builder.Services.AddHostedService<RetentionCleanupService>();
+if (selfLoggingOptions.Enabled)
+{
+    builder.Services.AddHostedService<SelfLogFlushService>();
+}
 
 // Add API key authentication handler (per-application ingestion keys)
 builder.Services.AddAuthentication()

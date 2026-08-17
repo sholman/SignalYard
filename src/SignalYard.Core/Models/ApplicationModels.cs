@@ -69,6 +69,12 @@ public class ApplicationDto
     public required bool Enabled { get; set; }
     public required int RetentionDays { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// True for the built-in self-logging application. Used by the UI to badge the row and hide the
+    /// delete / regenerate-key controls.
+    /// </summary>
+    public bool IsSystem { get; set; }
 }
 
 /// <summary>

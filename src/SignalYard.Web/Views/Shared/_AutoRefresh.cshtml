@@ -33,6 +33,11 @@
 
         ring.style.strokeDasharray = CIRC.toFixed(3);
 
+        // Anchor the countdown to a wall-clock deadline rather than a tick counter. Browsers throttle
+        // (and eventually freeze) setInterval in hidden/background tabs, so a "decrement by one each
+        // tick" countdown stalls whenever the tab isn't active. Measuring against Date.now() means the
+        // first tick after the tab is shown again reflects the true elapsed time and reloads if due.
+        var deadline = Date.now() + TOTAL * 1000;
         var remaining = TOTAL;
 
         function fmt(secs) {
@@ -55,20 +60,33 @@
             window.location.reload();
         });
 
-        render();
-        setInterval(function () {
+        function tick() {
             if (paused()) {
                 widget.classList.add('is-paused');
                 text.textContent = 'Auto-refresh paused';
+                deadline = Date.now() + remaining * 1000; // hold the deadline while paused
                 return;
             }
             widget.classList.remove('is-paused');
-            remaining -= 1;
+            remaining = Math.max(0, Math.round((deadline - Date.now()) / 1000));
             if (remaining <= 0) {
+                // Don't reload a tab nobody is looking at — a hidden tab reloading burns requests and
+                // would just repeat while it stays hidden. Defer until it's shown again; the
+                // visibilitychange handler below fires this tick the moment the user returns.
+                if (document.hidden) return;
                 window.location.reload();
                 return;
             }
             render();
-        }, 1000);
+        }
+
+        render();
+        setInterval(tick, 1000);
+
+        // Catch up immediately when the tab becomes visible again, instead of waiting for the next
+        // (possibly still-throttled) interval tick.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) tick();
+        });
     })();
 </script>

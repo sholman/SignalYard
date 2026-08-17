@@ -256,6 +256,11 @@ claude mcp add --transport http signalyard https://your-signalyard.azurewebsites
 | `AzureAd:ClientId` | Entra ID application ID | - |
 | `RetentionCleanup:StartupDelayMinutes` | Delay before first cleanup run | 60 |
 | `RetentionCleanup:IntervalHours` | Hours between cleanup runs | 24 |
+| `SelfLogging:Enabled` | Write SignalYard's own internal logs into a built-in `signalyard` application, viewable in the log viewer like any other app | `true` |
+| `SelfLogging:MinimumLevel` | Minimum level captured by self-logging (`Verbose`/`Debug`/`Information`/`Warning`/`Error`/`Fatal`) | `Warning` |
+| `SelfLogging:RetentionDays` | Retention for the built-in `signalyard` application when first created | 14 |
+
+> Self-logging is in-process (no API key or network hop) and best-effort: if storage is unavailable it drops its own logs rather than affecting requests. The built-in `signalyard` application is created automatically on startup and is protected from deletion and key regeneration in the UI. Set `SelfLogging:Enabled` to `false` to turn it off entirely.
 
 ## Architecture
 

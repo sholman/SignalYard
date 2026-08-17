@@ -22,4 +22,8 @@
     <UserSecretsId>34434118-d8b2-4084-8c7f-0c7bab39ecc4</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SignalYard.Tests" />
+  </ItemGroup>
+
 </Project>

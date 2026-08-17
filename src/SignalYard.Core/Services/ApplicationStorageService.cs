@@ -252,6 +252,78 @@ public class ApplicationStorageService
     }
 
     /// <summary>
+    /// Ensures the built-in system application (SignalYard's own logs) exists. Idempotent,
+    /// non-destructive, and collision-aware so an in-place upgrade of an existing deployment is seamless:
+    /// <list type="bullet">
+    /// <item>Absent → create it as a system app with in-process ingestion (no API key) and the supplied retention.</item>
+    /// <item>Already a system app → no-op (do not overwrite an operator-tuned retention).</item>
+    /// <item>Present but a normal user app of the same name → adopt it in place (mark it system) while
+    /// preserving its existing API key, description, and retention.</item>
+    /// </list>
+    /// Concurrent starts across multiple instances are tolerated (409/412 are treated as "already done").
+    /// </summary>
+    public async Task<SystemApplicationSeedResult> EnsureSystemApplicationAsync(
+        string name,
+        int retentionDays,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _applicationsTable.GetEntityAsync<Application>(
+                Application.DefaultPartitionKey,
+                name,
+                cancellationToken: cancellationToken);
+
+            var application = response.Value;
+
+            if (application.IsSystem)
+            {
+                return SystemApplicationSeedResult.AlreadyPresent;
+            }
+
+            // Adopt a pre-existing user app of this name without touching its key, description, or
+            // retention. Merge so only IsSystem is written.
+            application.IsSystem = true;
+            try
+            {
+                await _applicationsTable.UpdateEntityAsync(
+                    application, application.ETag, TableUpdateMode.Merge, cancellationToken);
+            }
+            catch (RequestFailedException ex) when (ex.Status == 412)
+            {
+                // Another instance updated it concurrently; treat as done.
+            }
+
+            return SystemApplicationSeedResult.Adopted;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            var application = new Application
+            {
+                Name = name,
+                Description = "Built-in application: SignalYard's own internal logs.",
+                ApiKeyHash = string.Empty,
+                ApiKeyPrefix = string.Empty,
+                Enabled = true,
+                IsSystem = true,
+                RetentionDays = retentionDays,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            try
+            {
+                await _applicationsTable.AddEntityAsync(application, cancellationToken);
+                return SystemApplicationSeedResult.Created;
+            }
+            catch (RequestFailedException addEx) when (addEx.Status == 409)
+            {
+                // Another instance created it first; fine.
+                return SystemApplicationSeedResult.AlreadyPresent;
+            }
+        }
+    }
+
+    /// <summary>
     /// Ensures the Applications table exists
     /// </summary>
     public async Task EnsureTableExistsAsync(CancellationToken cancellationToken = default)
@@ -268,7 +340,23 @@ public class ApplicationStorageService
             ApiKeyPrefix = app.ApiKeyPrefix,
             Enabled = app.Enabled,
             RetentionDays = app.RetentionDays,
-            CreatedAt = app.CreatedAt
+            CreatedAt = app.CreatedAt,
+            IsSystem = app.IsSystem
         };
     }
+}
+
+/// <summary>
+/// Outcome of ensuring the built-in system application exists.
+/// </summary>
+public enum SystemApplicationSeedResult
+{
+    /// <summary>The system application was created because none existed.</summary>
+    Created,
+
+    /// <summary>A system application of this name was already present; nothing changed.</summary>
+    AlreadyPresent,
+
+    /// <summary>An existing non-system application of this name was adopted as the system application.</summary>
+    Adopted
 }

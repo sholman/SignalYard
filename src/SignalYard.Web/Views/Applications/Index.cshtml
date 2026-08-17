@@ -54,14 +54,27 @@
                 {
                     <tr>
                         <td data-label="Name">
-                            <div class="app-name">@app.Name</div>
+                            <div class="app-name">
+                                @app.Name
+                                @if (app.IsSystem)
+                                {
+                                    <span class="badge badge-system" title="Built-in application: SignalYard's own internal logs">System</span>
+                                }
+                            </div>
                             @if (!string.IsNullOrEmpty(app.Description))
                             {
                                 <div class="app-description">@app.Description</div>
                             }
                         </td>
                         <td data-label="API Key">
-                            <code class="api-key-prefix">@app.ApiKeyPrefix...</code>
+                            @if (app.IsSystem)
+                            {
+                                <span class="api-key-inprocess">In-process</span>
+                            }
+                            else
+                            {
+                                <code class="api-key-prefix">@app.ApiKeyPrefix...</code>
+                            }
                         </td>
                         <td data-label="Status">
                             <span class="badge @(app.Enabled ? "badge-enabled" : "badge-disabled")">
@@ -72,10 +85,16 @@
                         <td data-label="Created">@app.CreatedAt.ToString("yyyy-MM-dd")</td>
                         <td data-label="">
                             <div class="action-buttons">
-                                <button class="btn btn-secondary btn-sm" onclick="showEditDialog('@app.Name', '@System.Web.HttpUtility.JavaScriptStringEncode(app.Description ?? "")', @app.RetentionDays, @(app.Enabled ? "true" : "false"))">Edit</button>
-                                <button class="btn btn-secondary btn-sm" onclick="showRegenerateDialog('@app.Name')">Regenerate Key</button>
+                                <button class="btn btn-secondary btn-sm" onclick="showEditDialog('@app.Name', '@System.Web.HttpUtility.JavaScriptStringEncode(app.Description ?? "")', @app.RetentionDays, @(app.Enabled ? "true" : "false"), @(app.IsSystem ? "true" : "false"))">Edit</button>
+                                @if (!app.IsSystem)
+                                {
+                                    <button class="btn btn-secondary btn-sm" onclick="showRegenerateDialog('@app.Name')">Regenerate Key</button>
+                                }
                                 <button class="btn btn-secondary btn-sm" onclick="showClearLogsDialog('@app.Name')">Clear Data</button>
-                                <button class="btn btn-danger btn-sm" onclick="showDeleteDialog('@app.Name')">Delete</button>
+                                @if (!app.IsSystem)
+                                {
+                                    <button class="btn btn-danger btn-sm" onclick="showDeleteDialog('@app.Name')">Delete</button>
+                                }
                             </div>
                         </td>
                     </tr>
@@ -275,7 +294,7 @@
         document.getElementById('createEditModal').style.display = 'flex';
     }
 
-    function showEditDialog(name, description, retention, enabled) {
+    function showEditDialog(name, description, retention, enabled, isSystem) {
         isEditing = true;
         editingName = name;
         document.getElementById('modalTitle').textContent = 'Edit Application';
@@ -286,7 +305,8 @@
         document.getElementById('formDescription').value = description;
         document.getElementById('formRetention').value = retention;
         document.getElementById('formEnabled').checked = enabled;
-        document.getElementById('enabledGroup').style.display = 'block';
+        // The built-in system app has no key-based ingestion to toggle, so hide the enable checkbox for it.
+        document.getElementById('enabledGroup').style.display = isSystem ? 'none' : 'block';
         document.getElementById('createEditModal').style.display = 'flex';
     }
 

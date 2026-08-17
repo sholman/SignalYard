@@ -78,11 +78,16 @@ public class ApplicationsController : Controller
 
         try
         {
+            // The built-in system app has no API key lookup to toggle and must stay enabled, so ignore the
+            // Enabled field for it (description/retention edits are still allowed).
+            var existing = await _applicationService.GetApplicationAsync(name);
+            var isSystem = existing?.IsSystem == true;
+
             await _applicationService.UpdateApplicationAsync(name, new UpdateApplicationRequest
             {
                 Description = form.Description,
                 RetentionDays = form.RetentionDays,
-                Enabled = form.Enabled
+                Enabled = isSystem ? null : form.Enabled
             });
 
             TempData["SuccessMessage"] = $"Application '{name}' updated successfully.";
@@ -102,6 +107,13 @@ public class ApplicationsController : Controller
         if (string.IsNullOrEmpty(name))
         {
             TempData["ErrorMessage"] = "Application name is required.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var target = await _applicationService.GetApplicationAsync(name);
+        if (target?.IsSystem == true)
+        {
+            TempData["ErrorMessage"] = $"'{name}' is a built-in application; it uses in-process logging and has no API key to regenerate.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -152,6 +164,13 @@ public class ApplicationsController : Controller
         if (string.IsNullOrEmpty(name))
         {
             TempData["ErrorMessage"] = "Application name is required.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var target = await _applicationService.GetApplicationAsync(name);
+        if (target?.IsSystem == true)
+        {
+            TempData["ErrorMessage"] = $"'{name}' is a built-in application and cannot be deleted. Disable it via SelfLogging:Enabled if you don't want it.";
             return RedirectToAction(nameof(Index));
         }
 
